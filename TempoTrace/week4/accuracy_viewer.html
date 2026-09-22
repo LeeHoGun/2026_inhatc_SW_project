@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TempoTrace - 정확도 분석 결과</title>
+<style>
+  * { box-sizing: border-box; word-break: keep-all; overflow-wrap: break-word; }
+  body {
+    margin: 0;
+    font-family: '맑은 고딕', 'Malgun Gothic', Arial, sans-serif;
+    background: #eef1f5;
+    padding: 40px;
+  }
+  .card {
+    max-width: 960px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 8px;
+    padding: 32px 40px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  h1 { font-size: 24px; color: #1c1c1c; margin-top: 0; }
+  p.desc { color: #555; font-size: 15px; line-height: 1.6; }
+
+  .upload-box {
+    border: 2px dashed #2f5da8;
+    border-radius: 6px;
+    padding: 24px;
+    text-align: center;
+    margin: 20px 0;
+    color: #2f5da8;
+  }
+
+  .accuracy-hero {
+    text-align: center;
+    background: #f4f7fb;
+    border-radius: 8px;
+    padding: 28px;
+    margin: 20px 0;
+  }
+  .accuracy-hero .big { font-size: 56px; font-weight: bold; color: #2f5da8; }
+  .accuracy-hero .small { font-size: 14px; color: #666; margin-top: 6px; }
+
+  .stats { display: flex; gap: 16px; margin-top: 16px; }
+  .stat-box {
+    flex: 1;
+    background: #f4f7fb;
+    border-left: 4px solid #2f5da8;
+    padding: 14px 16px;
+  }
+  .stat-box .num { font-size: 22px; font-weight: bold; color: #2f5da8; }
+  .stat-box .label { font-size: 13px; color: #666; margin-top: 4px; }
+
+  canvas {
+    width: 100%;
+    height: 160px;
+    background: #f7f9fc;
+    border: 1px solid #d3d9e2;
+    border-radius: 4px;
+    display: block;
+    margin-top: 16px;
+  }
+  .canvas-label { font-size: 13px; color: #555; margin-top: 20px; font-weight: bold; }
+
+  .legend { display: flex; gap: 18px; margin-top: 8px; font-size: 13px; color: #555; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 14px; height: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>TempoTrace — 정확도 분석 결과</h1>
+  <p class="desc">
+    accuracy_test.py 실행 후 생성된 <b>accuracy_result.json</b> 파일을 불러오면
+    원곡과 내 연주를 비교한 정확도와 타이밍 오차를 확인할 수 있습니다.
+  </p>
+
+  <div class="upload-box">
+    accuracy_result.json 파일을 선택하세요
+    <br>
+    <input type="file" id="fileInput" accept=".json">
+  </div>
+
+  <div class="accuracy-hero">
+    <div class="big" id="accuracyBig">-</div>
+    <div class="small">박자 정확도</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-box"><div class="num" id="avgErrorStat">-</div><div class="label">평균 타이밍 오차 (ms)</div></div>
+    <div class="stat-box"><div class="num" id="missedStat">-</div><div class="label">놓친 음 개수</div></div>
+    <div class="stat-box"><div class="num" id="extraStat">-</div><div class="label">엉뚱하게 친 음 개수</div></div>
+  </div>
+
+  <div class="canvas-label">원곡 파형 + onset 위치</div>
+  <canvas id="originalCanvas"></canvas>
+
+  <div class="canvas-label">내 연주 파형 + 비교 결과</div>
+  <div class="legend">
+    <span><span class="swatch" style="background:#2f9e5b;"></span> 맞은 음</span>
+    <span><span class="swatch" style="background:#d64545;"></span> 엉뚱하게 친 음</span>
+    <span><span class="swatch" style="background:#999; border-top:2px dashed #999;"></span> 놓친 지점(원곡 기준)</span>
+  </div>
+  <canvas id="userCanvas"></canvas>
+</div>
+
+<script>
+  document.getElementById('fileInput').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      const data = JSON.parse(event.target.result);
+      renderResult(data);
+    };
+    reader.readAsText(file);
+  });
+
+  function renderResult(data) {
+    document.getElementById('accuracyBig').textContent = data.accuracy + '%';
+    document.getElementById('avgErrorStat').textContent = data.avg_error_ms;
+    document.getElementById('missedStat').textContent = data.missed.length;
+    document.getElementById('extraStat').textContent = data.extra.length;
+
+    drawWave('originalCanvas', data.original_waveform, data.original_duration, [
+      { times: data.original_onsets, color: '#2f5da8' }
+    ]);
+
+    drawWave('userCanvas', data.user_waveform, data.user_duration, [
+      { times: data.matched.map(m => m.user), color: '#2f9e5b' },
+      { times: data.extra, color: '#d64545' }
+    ], data.missed, data.original_duration);
+  }
+
+  // 파형 + 여러 종류의 마커(색상별 세로선)를 그리는 함수
+  function drawWave(canvasId, waveform, duration, markerGroups, missedTimes, missedDuration) {
+    const canvas = document.getElementById(canvasId);
+    canvas.width = canvas.clientWidth;
+    canvas.height = 160;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height, mid = h / 2;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // 파형 그리기
+    ctx.beginPath();
+    ctx.strokeStyle = '#8fa3c2';
+    ctx.lineWidth = 1;
+    waveform.forEach(function (v, i) {
+      const x = (i / waveform.length) * w;
+      const y = mid - v * mid * 0.9;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // 각 그룹의 색상으로 onset 마커 그리기
+    markerGroups.forEach(function (group) {
+      ctx.strokeStyle = group.color;
+      ctx.lineWidth = 2;
+      group.times.forEach(function (t) {
+        const x = (t / duration) * w;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      });
+    });
+
+    // 놓친 지점은 회색 점선으로 표시 (연주 쪽 캔버스에만 해당)
+    if (missedTimes) {
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      missedTimes.forEach(function (t) {
+        const x = (t / missedDuration) * w;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+    }
+  }
+</script>
+
+</body>
+</html>

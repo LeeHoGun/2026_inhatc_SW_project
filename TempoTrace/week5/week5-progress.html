@@ -165,7 +165,43 @@
   </section>
 
   <section class="slide">
-    <div class="slide-header"><div class="num">05. 이번 개선의 의미</div><h1>왜 이 기능이 필요한가</h1></div>
+    <div class="slide-header"><div class="num">05. 실행 화면 — 스크립트 실행</div><h1>python accuracy_test.py 실행</h1></div>
+    <div class="content">
+      <p>스크립트를 실행하면 원곡과 내 연주를 각각 분석하는 과정과, 최종 계산 결과가 터미널에 순서대로 출력됩니다.</p>
+      <div class="imgwrap">
+        <img src="terminal_run_screenshot.png" alt="스크립트 실행 시 터미널 출력 화면">
+        <div class="caption">원곡·연주 각각의 onset 개수, 정확도, 평균 오차, 놓친 음/엉뚱한 음이 콘솔에 순서대로 출력됨</div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">06. 실행 화면 — 비교 그래프</div><h1>원곡과 내 연주 파형 비교</h1></div>
+    <div class="content">
+      <p>콘솔 출력 직후, 원곡과 내 연주의 파형을 비교하는 그래프 창이 자동으로 뜹니다.</p>
+      <div class="imgwrap">
+        <img src="accuracy_result.png" alt="원곡과 내 연주 파형 비교 그래프">
+        <div class="caption">위: 원곡 onset(파란 점선) / 아래: 내 연주 — 맞은 음(초록), 엉뚱하게 친 음(빨강)</div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">07. 실행 화면 — 웹 리포트</div><h1>브라우저에 자동으로 뜨는 결과 페이지</h1></div>
+    <div class="content">
+      <p>그래프와 동시에, 분석 결과가 이미 반영된 웹페이지가 기본 브라우저로 자동 실행됩니다. 파일을 따로 열 필요가 없습니다.</p>
+      <div class="imgwrap">
+        <img src="web_report_screenshot.png" alt="브라우저에 자동으로 열리는 정확도 분석 웹 리포트 화면">
+        <div class="caption">정확도, 평균 오차, 놓친 음/엉뚱한 음 통계와 함께 허용 오차 슬라이더가 즉시 사용 가능한 상태로 표시됨</div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">08. 이번 개선의 의미</div><h1>왜 이 기능이 필요한가</h1></div>
     <div class="content">
       <ul>
         <li>사람마다, 곡마다 "얼마나 엄격하게 채점해야 적절한지"의 기준이 다를 수 있음</li>
@@ -177,7 +213,7 @@
   </section>
 
   <section class="slide">
-    <div class="slide-header"><div class="num">06. 다음 계획</div><h1>다음 주까지 할 일</h1></div>
+    <div class="slide-header"><div class="num">09. 다음 계획</div><h1>다음 주까지 할 일</h1></div>
     <div class="content">
       <ul>
         <li>실제 기타 연주를 스마트폰으로 녹음해서 진짜 데이터로 전체 기능 테스트</li>

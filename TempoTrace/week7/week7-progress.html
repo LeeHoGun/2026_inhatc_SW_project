@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TempoTrace - 7주차 진행상황 (6~7주차 통합)</title>
+<style>
+  * { box-sizing: border-box; word-break: keep-all; overflow-wrap: break-word; }
+  body {
+    margin: 0;
+    font-family: '맑은 고딕', 'Malgun Gothic', Arial, sans-serif;
+    background: #eef1f5;
+  }
+  .deck { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+  .slide {
+    display: none;
+    width: 100%; height: 100%;
+    background: #ffffff;
+    padding: 60px 80px 70px;
+    flex-direction: column;
+  }
+  .slide.active { display: flex; }
+
+  .slide-header {
+    border-bottom: 3px solid #2f5da8;
+    padding-bottom: 14px;
+    margin-bottom: 26px;
+  }
+  .slide-header .num { color: #2f5da8; font-weight: bold; font-size: 15px; margin-bottom: 6px; }
+  .slide-header h1 { margin: 0; font-size: 30px; color: #1c1c1c; }
+
+  .content { flex: 1; font-size: 19px; line-height: 1.75; color: #2b2b2b; overflow-y: auto; }
+  .content p { margin: 0 0 12px; }
+
+  ul { margin: 0; padding-left: 22px; }
+  li { margin-bottom: 12px; }
+  li .sub { display: block; font-size: 15px; color: #666; margin-top: 4px; }
+
+  .highlight { color: #2f5da8; font-weight: bold; }
+
+  .box {
+    background: #f4f7fb;
+    border-left: 5px solid #2f5da8;
+    padding: 14px 20px;
+    margin-bottom: 16px;
+  }
+
+  table.steps { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  table.steps th, table.steps td {
+    border: 1px solid #d3d9e2;
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 17px;
+    vertical-align: top;
+  }
+  table.steps th { background: #2f5da8; color: white; width: 130px; }
+  table.steps td.status { width: 150px; font-weight: bold; white-space: nowrap; }
+  .done { color: #2f9e5b; }
+  .todo { color: #c27a00; }
+
+  code {
+    background: #f4f7fb;
+    border: 1px solid #d3d9e2;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 0.88em;
+    color: #2f5da8;
+  }
+  pre.cmd {
+    background: #1e2430; color: #e8edf5;
+    padding: 14px 18px; border-radius: 6px;
+    font-size: 15px; line-height: 1.75; margin: 0 0 14px;
+    overflow-x: auto; white-space: pre;
+    font-family: Consolas, 'D2Coding', monospace;
+  }
+  pre.cmd .c { color: #8fa3c2; }
+
+  /* 글 + 캡처 이미지를 나란히 배치 */
+  .two-col { display: flex; gap: 28px; align-items: flex-start; }
+  .two-col .txt { flex: 1; min-width: 0; }
+  .two-col .pic { flex: 1.2; min-width: 0; text-align: center; }
+  img.shot {
+    max-width: 100%; max-height: 360px;
+    border: 1px solid #d3d9e2; border-radius: 4px;
+  }
+  .caption { font-size: 13px; color: #888; margin-top: 6px; line-height: 1.5; }
+  img.shot { cursor: zoom-in; }
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100; cursor: zoom-out;
+  }
+  .lightbox.on { display: flex; }
+  .lightbox img { max-width: 94vw; max-height: 94vh; border-radius: 4px; background: #fff; }
+  .ph {
+    border: 2px dashed #b9c3d4; color: #7a8699; background: #f7f9fc;
+    border-radius: 6px; padding: 48px 16px; font-size: 14px; text-align: center; line-height: 1.6;
+  }
+  .imgwrap { text-align: center; }
+
+  .title-slide { justify-content: center; align-items: flex-start; }
+  .title-slide .meta { font-size: 16px; color: #555; margin-bottom: 30px; }
+  .title-slide h1 { font-size: 44px; margin: 0 0 20px 0; color: #1c1c1c; }
+  .title-slide .desc { font-size: 18px; color: #444; max-width: 640px; line-height: 1.7; }
+  .title-slide .badge {
+    display: inline-block;
+    background: #2f5da8; color: white;
+    padding: 6px 14px; border-radius: 4px;
+    font-size: 14px; margin-bottom: 16px;
+  }
+
+  .navbtns {
+    position: fixed; bottom: 16px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 10px; z-index: 10;
+  }
+  .navbtns button {
+    background: #2f5da8; color: white; border: none;
+    padding: 8px 18px; border-radius: 4px;
+    font-size: 14px; cursor: pointer;
+  }
+  .navbtns button:disabled { background: #b9c3d4; cursor: default; }
+
+  @media (max-width: 900px) {
+    .slide { padding: 36px 24px 70px; }
+    .two-col { flex-direction: column; }
+    .slide-header h1 { font-size: 24px; }
+    .content { font-size: 17px; }
+    .title-slide h1 { font-size: 34px; }
+  }
+</style>
+<script>
+  // 캡처 이미지가 아직 같은 폴더에 없을 때, 깨진 아이콘 대신 필요한 파일 이름을 안내하는 박스를 보여준다.
+  function imgMissing(img) {
+    const d = document.createElement('div');
+    d.className = 'ph';
+    d.textContent = '캡처 이미지가 필요합니다: ' + img.getAttribute('src') + ' (이 HTML과 같은 폴더에 넣어주세요)';
+    img.replaceWith(d);
+  }
+</script>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <section class="slide active title-slide">
+    <span class="badge">7주차 프로젝트 진행상황 발표 (6~7주차 통합)</span>
+    <div class="meta">202344058 &nbsp;|&nbsp; 컴퓨터정보과 B반 &nbsp;|&nbsp; 이호건</div>
+    <h1>TempoTrace</h1>
+    <div class="desc">6주차는 강의 대체 일정(2026 AI 페스타 참관)으로 진행하지 않아, 6·7주차 2주 분량의 진행 내용을 함께 보고합니다.<br><br>어느 시간대에서 틀렸는지, 연습할수록 얼마나 나아지는지까지 확인할 수 있도록 기능을 확장했습니다.</div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">01. 지난 계획 요약</div><h1>5주차에 세운 다음 계획</h1></div>
+    <div class="content">
+      <ul>
+        <li>실제 기타 연주를 스마트폰으로 녹음해서 진짜 데이터로 전체 기능 테스트</li>
+        <li>슬라이더로 찾은 적절한 허용 오차 기준값을 프로그램 기본값으로 반영</li>
+        <li>결과 화면 UI 마무리 다듬기 (모바일 화면 대응 등)</li>
+      </ul>
+      <div class="box" style="margin-top:18px;">
+        이번 2주에는 이 중 <span class="highlight">결과 화면 다듬기(모바일 대응)</span>를 진행하고, 처음 계획서에 있던
+        <span class="highlight">시간대별 오류 시각화</span>와 <span class="highlight">반복 연습 누적 분석</span> 기능을 구현했습니다.
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">02. 이번 2주 진행 요약</div><h1>6~7주차에 추가한 기능</h1></div>
+    <div class="content">
+      <table class="steps">
+        <tr><th>기능 ①</th><td><b>시간대별 오류 분포</b> — 곡을 구간으로 나눠서 "몇 초 구간에서 얼마나 틀렸는지"를 막대그래프로 표시</td></tr>
+        <tr><th>기능 ②</th><td><b>반복 연습 기록</b> — 연습 결과를 계속 누적해서 정확도 변화 추이와 "자주 틀리는 구간"을 분석</td></tr>
+        <tr><th>개선 ③</th><td><b>사용성</b> — 여러 번의 연주를 한 번에 분석, 모바일 화면 대응, 구간별 상세 정보 말풍선</td></tr>
+      </table>
+      <p style="margin-top:16px; font-size:16px; color:#666;">※ 기능 ①·②는 1주차 계획서의 2단계(시간대별 오차 시각화)와 3단계(반복 연습 추이 분석)에 해당합니다.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">03. 기능 ① 시간대별 오류 분포</div><h1>어느 시간대에서 틀렸는가</h1></div>
+    <div class="content">
+      <div class="two-col">
+        <div class="txt">
+          <ul>
+            <li>곡을 일정한 구간(기본 2초)으로 나누고, 구간마다 <span class="highlight">놓친 음 / 엉뚱하게 친 음</span>을 집계</li>
+            <li>가장 많이 틀린 구간을 문장으로 요약해서 표시
+              <span class="sub">예: "가장 많이 틀린 구간: 2~4초, 4~6초, 6~8초 외 2곳"</span></li>
+            <li>허용 오차 슬라이더와 연동되어, 기준을 바꾸면 구간별 분포도 즉시 갱신</li>
+            <li>곡이 길어지면 구간 길이를 자동으로 늘려 최대 15구간으로 유지</li>
+          </ul>
+        </div>
+        <div class="pic">
+          <img class="shot" src="week7_segments.png" alt="시간대별 오류 분포 화면" onerror="imgMissing(this)">
+          <div class="caption">회색: 놓친 음 / 빨강: 엉뚱하게 친 음 / 연한 초록: 오류 없음</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">04. 기능 ② 반복 연습 기록</div><h1>연습할수록 나아지고 있는가</h1></div>
+    <div class="content">
+      <div class="two-col">
+        <div class="txt">
+          <ul>
+            <li>실행할 때마다 결과를 <code>practice_history.json</code>에 자동 기록 (일시, 정확도, 평균 오차, 구간별 오류)</li>
+            <li><span class="highlight">회차별 정확도 변화</span>를 꺾은선 그래프와 표로 표시
+              <span class="sub">첫 기록 대비 얼마나 올랐는지(%p)도 요약</span></li>
+            <li><span class="highlight">자주 틀리는 구간</span>: 모든 연습의 구간별 오류를 평균 내어, 반복해서 틀리는 시간대를 찾아냄</li>
+          </ul>
+        </div>
+        <div class="pic">
+          <img class="shot" src="week7_history.png" alt="반복 연습 기록 화면" onerror="imgMissing(this)">
+          <div class="caption">회차별 정확도 변화와 자주 틀리는 구간(평균)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">05. 개선 ③ 사용성</div><h1>한 번의 실행으로 여러 연습을 분석</h1></div>
+    <div class="content">
+<pre class="cmd"><span class="c"># 기본: original.wav 와 my_take.wav 비교</span>
+python accuracy_test.py
+
+<span class="c"># 여러 번의 연습(take)을 순서대로 분석하고 기록에 누적</span>
+python accuracy_test.py take1.wav take2.wav take3.wav
+
+<span class="c"># 옵션: 기록에 남기지 않기 / 기록 초기화</span>
+python accuracy_test.py take1.wav --no-history
+python accuracy_test.py --reset-history</pre>
+      <ul>
+        <li>결과 화면이 <span class="highlight">모바일 화면 폭</span>에도 맞게 정리되도록 반응형으로 개선 (고해상도 화면에서도 선명하게 표시)</li>
+        <li>그래프 위에 마우스를 올리거나 터치하면 해당 구간·회차의 상세 정보를 말풍선으로 확인</li>
+        <li>결과 화면이 스스로 데이터를 읽어 그리도록 구조를 정리해, 파이썬 쪽 코드가 단순해짐</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">06. 실행 화면</div><h1>터미널 실행 결과</h1></div>
+    <div class="content">
+      <p>여러 번의 연습을 한 번에 실행하면, 연주마다 결과가 출력되고 마지막에 연습 기록의 정확도 추이가 정리됩니다. 이어서 결과 웹페이지가 자동으로 열립니다.</p>
+      <div class="imgwrap">
+        <img class="shot" src="week7_terminal.png" alt="터미널 실행 화면" onerror="imgMissing(this)">
+        <div class="caption">연주별 정확도, 시간대별 오류, 연습 기록 추이가 순서대로 출력됨</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">07. 검증</div><h1>계산 결과와 동작을 점검한 내용</h1></div>
+    <div class="content">
+      <ul>
+        <li>파이썬이 계산한 값과 웹페이지가 다시 계산한 값이 <span class="highlight">허용 오차 20~300ms의 8개 기준 모두에서 일치</span>
+          <span class="sub">정확도, 놓친 음·엉뚱한 음 개수, 시간대별 집계까지 비교</span></li>
+        <li>연습 기록의 누적, 초기화, 기록 제외 옵션이 의도대로 동작</li>
+        <li>기록이 없거나 1회뿐인 경우, 파일이 없는 경우, 기록 파일이 손상된 경우에도 오류 없이 안내하며 동작</li>
+        <li>PC와 모바일 화면 폭에서 레이아웃 확인 (가로 스크롤 없음), 마우스·터치 말풍선 동작 확인</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">08. 계획서 대비 진행 현황</div><h1>1주차 계획서와 비교</h1></div>
+    <div class="content">
+      <table class="steps">
+        <tr><th>1단계</th><td>onset detection 기반 박자 정확도(%) 계산</td><td class="status done">완료</td></tr>
+        <tr><th>2단계</th><td>시간대별 오차를 웹페이지에 시각화</td><td class="status done">완료 (6~7주차)</td></tr>
+        <tr><th>3단계</th><td>여러 번 연습한 기록을 누적해서 추이 분석</td><td class="status done">완료 (6~7주차)</td></tr>
+        <tr><th>3단계 (스트레치)</th><td>음정(피치) 정확도 분석</td><td class="status todo">미진행 (추후 검토)</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">09. 이슈 / 보완할 점</div><h1>진행하며 발견한 이슈</h1></div>
+    <div class="content">
+      <ul>
+        <li><b>모바일에서 말풍선이 바로 사라지는 문제</b> — 터치하면 브라우저가 마우스가 벗어난 것으로 처리해서 발생
+          <span class="sub">해결: 터치 직후의 해당 이벤트는 무시하도록 수정</span></li>
+        <li><b>연습 기록의 비교 기준이 달라질 수 있음</b> — 실행할 때마다 허용 오차가 다르면 추이가 왜곡됨
+          <span class="sub">보완: 기록 표에 당시의 기준값(ms)을 함께 표시</span></li>
+        <li><b>곡이 길면 구간이 너무 많아지는 문제</b>
+          <span class="sub">해결: 최대 15구간으로 구간 길이를 자동 조정하고, 곡 끝의 짧은 조각은 마지막 구간에 합침</span></li>
+        <li><b>같은 연주를 다시 실행하면 기록이 중복됨</b>
+          <span class="sub">해결: <code>--no-history</code> 옵션으로 기록에 남기지 않고 실행 가능</span></li>
+        <li><b>실제 기타 녹음 데이터로 전체 기능을 검증하는 단계는 아직 진행 전</b> — 다음 단계에서 진행 예정</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">10. 다음 계획</div><h1>다음 주까지 할 일</h1></div>
+    <div class="content">
+      <ul>
+        <li>스마트폰으로 실제 기타 연주를 녹음해서 전체 기능 검증</li>
+        <li>슬라이더로 찾은 적절한 허용 오차 값을 프로그램 기본값으로 확정</li>
+        <li>시간이 되면 음정(피치) 정확도 분석 가능성 검토 (스트레치 목표)</li>
+        <li>최종 발표 대비: README 정리, 발표용 화면 구성</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide title-slide">
+    <h1>이상으로 발표를 마치겠습니다</h1>
+    <div class="desc">감사합니다.</div>
+  </section>
+
+</div>
+
+<div class="lightbox" id="lightbox"><img id="lightboxImg" alt=""></div>
+
+<div class="navbtns">
+  <button id="prevBtn" onclick="go(-1)">이전</button>
+  <span id="pageInfo" style="align-self:center; color:#555; font-size:14px;"></span>
+  <button id="nextBtn" onclick="go(1)">다음</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let idx = 0;
+  function render(){
+    slides.forEach((s,i)=> s.classList.toggle('active', i===idx));
+    document.getElementById('pageInfo').textContent = (idx+1) + ' / ' + slides.length;
+    document.getElementById('prevBtn').disabled = (idx===0);
+    document.getElementById('nextBtn').disabled = (idx===slides.length-1);
+  }
+  function go(delta){
+    idx = Math.min(Math.max(idx+delta,0), slides.length-1);
+    render();
+  }
+  window.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape') closeLightbox();
+    if(e.key==='ArrowRight') go(1);
+    if(e.key==='ArrowLeft') go(-1);
+  });
+
+  // 캡처 이미지를 클릭하면 크게 보여주고, 다시 클릭하거나 Esc를 누르면 닫음 (발표 중 작은 글자 확대용)
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightboxImg');
+  function closeLightbox() { lightbox.classList.remove('on'); }
+  document.querySelectorAll('img.shot').forEach(function (img) {
+    img.addEventListener('click', function () {
+      lightboxImg.src = img.src;
+      lightbox.classList.add('on');
+    });
+  });
+  lightbox.addEventListener('click', closeLightbox);
+  render();
+</script>
+</body>
+</html>

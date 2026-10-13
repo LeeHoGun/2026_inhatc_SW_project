@@ -1,0 +1,110 @@
+[
+ {
+  "timestamp": "2026-10-14 02:15",
+  "original": "original.wav",
+  "take": "my_take.wav",
+  "accuracy": 87.5,
+  "avg_error_ms": 21.6,
+  "tolerance_ms": 150,
+  "missed": 2,
+  "extra": 1,
+  "segment_seconds": 2.0,
+  "segment_missed": [
+   0,
+   0,
+   1,
+   1,
+   0,
+   0
+  ],
+  "segment_extra": [
+   0,
+   0,
+   0,
+   1,
+   0,
+   0
+  ]
+ },
+ {
+  "timestamp": "2026-10-14 02:15",
+  "original": "original.wav",
+  "take": "my_take_2.wav",
+  "accuracy": 81.2,
+  "avg_error_ms": 35.7,
+  "tolerance_ms": 150,
+  "missed": 3,
+  "extra": 2,
+  "segment_seconds": 2.0,
+  "segment_missed": [
+   0,
+   0,
+   1,
+   1,
+   0,
+   1
+  ],
+  "segment_extra": [
+   0,
+   1,
+   0,
+   0,
+   1,
+   0
+  ]
+ },
+ {
+  "timestamp": "2026-10-14 02:15",
+  "original": "original.wav",
+  "take": "my_take_3.wav",
+  "accuracy": 100.0,
+  "avg_error_ms": 36.3,
+  "tolerance_ms": 150,
+  "missed": 0,
+  "extra": 0,
+  "segment_seconds": 2.0,
+  "segment_missed": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "segment_extra": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ]
+ },
+ {
+  "timestamp": "2026-10-14 02:15",
+  "original": "original.wav",
+  "take": "my_take_4.wav",
+  "accuracy": 100.0,
+  "avg_error_ms": 29.0,
+  "tolerance_ms": 150,
+  "missed": 0,
+  "extra": 0,
+  "segment_seconds": 2.0,
+  "segment_missed": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "segment_extra": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ]
+ }
+]

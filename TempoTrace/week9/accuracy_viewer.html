@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TempoTrace - 정확도 분석 결과</title>
+<style>
+  * { box-sizing: border-box; word-break: keep-all; overflow-wrap: break-word; }
+  body {
+    margin: 0;
+    font-family: '맑은 고딕', 'Malgun Gothic', Arial, sans-serif;
+    background: #eef1f5;
+    padding: 40px;
+  }
+  .card {
+    max-width: 960px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 8px;
+    padding: 32px 40px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  h1 { font-size: 24px; color: #1c1c1c; margin-top: 0; }
+  p.desc { color: #555; font-size: 15px; line-height: 1.6; }
+
+  .upload-box {
+    border: 2px dashed #2f5da8;
+    border-radius: 6px;
+    padding: 24px;
+    text-align: center;
+    margin: 20px 0;
+    color: #2f5da8;
+  }
+
+  .accuracy-hero {
+    text-align: center;
+    background: #f4f7fb;
+    border-radius: 8px;
+    padding: 28px;
+    margin: 20px 0;
+  }
+  .accuracy-hero .big { font-size: 56px; font-weight: bold; color: #2f5da8; }
+  .accuracy-hero .small { font-size: 14px; color: #666; margin-top: 6px; }
+  .accuracy-hero .meta { font-size: 12.5px; color: #888; margin-top: 10px; }
+
+  .stats { display: flex; gap: 16px; margin-top: 16px; }
+  .stat-box {
+    flex: 1;
+    background: #f4f7fb;
+    border-left: 4px solid #2f5da8;
+    padding: 14px 16px;
+  }
+  .stat-box .num { font-size: 22px; font-weight: bold; color: #2f5da8; }
+  .stat-box .label { font-size: 13px; color: #666; margin-top: 4px; }
+
+  /* ---------- 기준값 조정 영역 ---------- */
+  .slider-box {
+    background: #f4f7fb;
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin: 20px 0;
+  }
+  .slider-box .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .slider-box .row .val { font-family: monospace; font-weight: bold; color: #2f5da8; font-size: 18px; }
+  .slider-box input[type="range"] { width: 100%; accent-color: #2f5da8; }
+  .slider-box .hint { font-size: 12.5px; color: #888; margin-top: 10px; line-height: 1.6; }
+  .tol-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+  .tol-controls input[type="number"] {
+    width: 96px; padding: 7px 8px; font-size: 16px; text-align: right;
+    border: 1px solid #b9c3d4; border-radius: 4px; background: #fff;
+  }
+  .tol-controls span.unit { font-size: 14px; color: #555; }
+  .btn {
+    background: #2f5da8; color: #fff; border: none; border-radius: 4px;
+    padding: 8px 14px; font-size: 14px; cursor: pointer;
+  }
+  .btn.ghost { background: #fff; color: #2f5da8; border: 1px solid #2f5da8; margin-left: auto; }
+  .save-status { font-size: 12.5px; margin-top: 10px; color: #2f7a4b; line-height: 1.6; min-height: 1.6em; }
+  .save-status.warn { color: #b26a00; }
+
+  canvas {
+    width: 100%;
+    height: 160px;
+    background: #f7f9fc;
+    border: 1px solid #d3d9e2;
+    border-radius: 4px;
+    display: block;
+    margin-top: 16px;
+  }
+  .canvas-label { font-size: 13px; color: #555; margin-top: 20px; font-weight: bold; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 8px; font-size: 13px; color: #555; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 14px; height: 3px; display: inline-block; }
+  .swatch.box { height: 10px; width: 10px; border-radius: 2px; }
+
+  .section-title {
+    font-size: 17px; font-weight: bold; color: #1c1c1c;
+    margin: 36px 0 4px; padding-top: 22px; border-top: 1px solid #e3e8ef;
+  }
+  .section-desc { font-size: 13px; color: #777; margin: 0; line-height: 1.6; }
+  .summary-line {
+    font-size: 14px; color: #2b2b2b; background: #f4f7fb;
+    border-left: 4px solid #2f5da8; border-radius: 4px;
+    padding: 10px 14px; margin-top: 12px; line-height: 1.6;
+  }
+  .note { font-size: 12.5px; color: #888; margin-top: 8px; line-height: 1.6; }
+
+  .table-wrap { max-height: 280px; overflow: auto; margin-top: 14px; border: 1px solid #d3d9e2; border-radius: 4px; }
+  table.history { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.history th, table.history td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #e3e8ef; white-space: nowrap; }
+  table.history th { background: #2f5da8; color: #fff; position: sticky; top: 0; }
+  table.history tr.latest td { background: #eef4ff; font-weight: bold; }
+  table.history td.old-tol { color: #999; }
+
+  .tip {
+    position: fixed; display: none; z-index: 50; pointer-events: none;
+    background: #1c1c1c; color: #fff; font-size: 12px; line-height: 1.5;
+    padding: 7px 10px; border-radius: 4px; white-space: pre-line; max-width: 280px;
+  }
+
+  @media (max-width: 640px) {
+    body { padding: 10px; }
+    .card { padding: 18px 14px; }
+    h1 { font-size: 20px; }
+    .accuracy-hero { padding: 18px 12px; }
+    .accuracy-hero .big { font-size: 44px; }
+    .stats { flex-direction: column; gap: 10px; }
+    .slider-box { padding: 14px; }
+    .btn.ghost { margin-left: 0; }
+    .section-title { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>TempoTrace — 정확도 분석 결과</h1>
+  <p class="desc">
+    accuracy_test.py 실행 후 생성된 <b>accuracy_result.json</b> 파일을 불러오면
+    원곡과 내 연주를 비교한 정확도와 타이밍 오차를 확인할 수 있습니다.
+  </p>
+
+  <div class="upload-box">
+    accuracy_result.json 파일을 선택하세요
+    <br>
+    <input type="file" id="fileInput" accept=".json">
+  </div>
+
+  <div class="accuracy-hero">
+    <div class="big" id="accuracyBig">-</div>
+    <div class="small">박자 정확도</div>
+    <div class="meta" id="fileMeta"></div>
+  </div>
+
+  <!-- 기준값(허용 오차) 조정: 바꾸는 즉시 이 페이지의 모든 결과가 다시 계산되고, 기본값으로 저장됨 -->
+  <div class="slider-box">
+    <div class="row">
+      <span>기준값(허용 오차) 조정</span>
+      <span class="val"><span id="toleranceVal">-</span>ms</span>
+    </div>
+    <input type="range" id="toleranceSlider" min="10" max="500" step="5" value="150">
+    <div class="tol-controls">
+      <button type="button" class="btn" id="tolMinus">− 5</button>
+      <input type="number" id="toleranceInput" min="10" max="1000" step="1" value="150" inputmode="numeric" aria-label="기준값(ms)">
+      <span class="unit">ms</span>
+      <button type="button" class="btn" id="tolPlus">+ 5</button>
+      <button type="button" class="btn ghost" id="tolReset">150ms로 되돌리기</button>
+    </div>
+    <div class="hint">값을 낮추면 더 엄격하게, 높이면 더 관대하게 채점합니다. 바꾸는 즉시 아래의 정확도, 시간대별 분포, 연습 기록 추이가 모두 새 기준으로 다시 계산되고, 바꾼 값은 기본값으로 저장됩니다. (슬라이더 10~500ms, 숫자 입력 10~1000ms)</div>
+    <div class="save-status" id="saveStatus"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-box"><div class="num" id="avgErrorStat">-</div><div class="label">평균 타이밍 오차 (ms)</div></div>
+    <div class="stat-box"><div class="num" id="missedStat">-</div><div class="label">놓친 음 개수</div></div>
+    <div class="stat-box"><div class="num" id="extraStat">-</div><div class="label">엉뚱하게 친 음 개수</div></div>
+  </div>
+
+  <div class="canvas-label">원곡 파형 + onset 위치</div>
+  <canvas id="originalCanvas"></canvas>
+
+  <div class="canvas-label">내 연주 파형 + 비교 결과</div>
+  <div class="legend">
+    <span><span class="swatch" style="background:#2f9e5b;"></span> 맞은 음</span>
+    <span><span class="swatch" style="background:#d64545;"></span> 엉뚱하게 친 음</span>
+    <span><span class="swatch" style="background:#999; border-top:2px dashed #999;"></span> 놓친 지점(원곡 기준)</span>
+  </div>
+  <canvas id="userCanvas"></canvas>
+
+  <!-- ===== 시간대별 오류 분포 ===== -->
+  <div class="section-title">시간대별 오류 분포</div>
+  <p class="section-desc">곡을 일정한 구간으로 나눠서, 어느 시간대에서 얼마나 틀렸는지 보여줍니다. 위의 기준값을 바꾸면 함께 바뀝니다.</p>
+  <div class="summary-line" id="segSummary">-</div>
+  <div class="legend">
+    <span><span class="swatch box" style="background:#9aa3b2;"></span> 놓친 음</span>
+    <span><span class="swatch box" style="background:#d64545;"></span> 엉뚱하게 친 음</span>
+    <span><span class="swatch box" style="background:#bfe3cd;"></span> 오류 없음</span>
+  </div>
+  <canvas id="segCanvas"></canvas>
+
+  <!-- ===== 반복 연습 기록 (결과 추이) ===== -->
+  <div id="historySection" style="display:none;">
+    <div class="section-title">반복 연습 기록 (결과 추이)</div>
+    <p class="section-desc">실행할 때마다 기록이 계속 누적됩니다. 기록에는 원본 onset 시각이 함께 저장되어 있어서, 위의 기준값을 바꾸면 <b>모든 회차가 새 기준으로 다시 계산</b>됩니다.</p>
+    <div class="summary-line" id="trendSummary">-</div>
+    <div class="note" id="histMeta"></div>
+
+    <div class="canvas-label">회차별 정확도 변화</div>
+    <canvas id="trendCanvas"></canvas>
+
+    <div class="canvas-label">자주 틀리는 구간 (표시된 회차 평균)</div>
+    <div class="summary-line" id="freqSummary" style="display:none;">-</div>
+    <div class="note" id="freqNote" style="display:none;">연습 기록이 2회 이상 쌓이면 구간별 평균이 표시됩니다.</div>
+    <canvas id="freqCanvas" style="display:none;"></canvas>
+
+    <div class="canvas-label">연습 기록 표 (최근 순)</div>
+    <div class="table-wrap">
+      <table class="history">
+        <thead><tr><th>회차</th><th>일시</th><th>연주 파일</th><th>정확도</th><th>평균 오차</th><th>놓침</th><th>엉뚱</th><th>기록 당시 기준</th></tr></thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+    <div class="note">※ 정확도·평균 오차·놓침·엉뚱은 모두 현재 기준값으로 다시 계산한 값입니다. '기록 당시 기준'은 그 연습을 기록했을 때의 기준값입니다.</div>
+  </div>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  // ------------------------------------------------------------
+  // 기본 설정
+  // ------------------------------------------------------------
+  // SERVED : 이 페이지가 파이썬이 띄운 리포트 서버(http://127.0.0.1:포트)에서 열렸는지 여부.
+  //          서버에서 열렸으면 기준값을 바꿀 때 프로그램의 설정 파일(tempotrace_settings.json)까지 저장할 수 있다.
+  //          파일로 직접 열었으면(file://) 이 브라우저(localStorage)에만 저장한다.
+  const SERVED = location.protocol === 'http:' || location.protocol === 'https:';
+  const LS_KEY = 'tempotrace.tolerance';
+  const FACTORY_TOL = 150, MIN_TOL = 10, MAX_TOL = 1000, SLIDER_MAX = 500;
+
+  let currentData = null;     // 불러온 분석 결과 전체
+  let tolMs = FACTORY_TOL;    // 지금 적용 중인 기준값(ms) — 이 값 하나가 화면 전체의 계산 기준
+  let settingsVersion = 0;    // 기본값 설정의 세대 번호 (프로그램 쪽 설정이 바뀌었는지 구분하는 용도)
+  let renderQueued = false;
+  let saveTimer = null;
+
+  function clampTol(v) { return Math.max(MIN_TOL, Math.min(MAX_TOL, Math.round(Number(v)))); }
+  function validTol(v) { return Number.isFinite(v) && v >= MIN_TOL && v <= MAX_TOL; }
+
+  // ------------------------------------------------------------
+  // 데이터 불러오기: (1) 파일 선택  (2) accuracy_test.py가 HTML에 심어준 EMBEDDED_DATA
+  // ------------------------------------------------------------
+  $('fileInput').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (event) { renderResult(JSON.parse(event.target.result)); };
+    reader.readAsText(file);
+  });
+
+  window.addEventListener('DOMContentLoaded', function () {
+    if (typeof EMBEDDED_DATA === 'undefined') return;
+    document.querySelector('.upload-box').style.display = 'none';
+
+    if (!SERVED) { renderResult(EMBEDDED_DATA); return; }
+
+    // 서버 모드: 리포트 파일에 들어 있는 기본값은 "파일을 만들 당시의 값"이라서,
+    // 페이지를 열거나 새로고침할 때마다 서버에서 "지금 저장된 최신 기본값"을 받아와서 사용한다.
+    // (받아오지 못하면 파일에 들어 있는 값으로 대신 연다)
+    fetch('/api/settings', { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (s) {
+        renderResult(Object.assign({}, EMBEDDED_DATA, { tolerance_ms: s.tolerance_ms, settings_version: s.version }));
+      })
+      .catch(function () { renderResult(EMBEDDED_DATA); });
+  });
+
+  // ------------------------------------------------------------
+  // 기준값 조작 (슬라이더 / 숫자 입력 / ±5 버튼 / 되돌리기)
+  // ------------------------------------------------------------
+  $('toleranceSlider').addEventListener('input', function (e) { setTolerance(Number(e.target.value), 'slider'); });
+
+  $('toleranceInput').addEventListener('input', function (e) {       // 숫자를 입력하는 도중에도 즉시 반영
+    const v = Number(e.target.value);
+    if (e.target.value !== '' && validTol(v)) setTolerance(v, 'input');
+  });
+  $('toleranceInput').addEventListener('change', function (e) {      // 입력을 마치면(포커스 이동) 범위를 벗어난 값은 보정
+    const v = Number(e.target.value);
+    setTolerance(Number.isFinite(v) && e.target.value !== '' ? v : tolMs, 'change');
+  });
+  $('toleranceInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') e.target.blur(); });
+
+  $('tolMinus').addEventListener('click', function () { setTolerance(tolMs - 5, 'btn'); });
+  $('tolPlus').addEventListener('click', function () { setTolerance(tolMs + 5, 'btn'); });
+  $('tolReset').addEventListener('click', function () { setTolerance(FACTORY_TOL, 'btn'); });
+
+  // 기준값을 바꾼다: 화면의 컨트롤을 맞추고 → 전체 다시 계산(예약) → 기본값으로 저장(예약)
+  function setTolerance(ms, source) {
+    ms = clampTol(ms);
+    tolMs = ms;
+    $('toleranceVal').textContent = ms;
+    $('toleranceSlider').value = Math.min(ms, SLIDER_MAX);
+    if (source !== 'input') $('toleranceInput').value = ms;   // 입력 중일 때는 사용자가 치고 있는 글자를 건드리지 않음
+    if (currentData) { scheduleRender(); scheduleSave(); }
+  }
+
+  // 슬라이더를 빠르게 끌면 이벤트가 매우 많이 발생하므로, 화면 갱신은 한 프레임에 한 번만 한다.
+  function scheduleRender() {
+    if (renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(function () { renderQueued = false; renderAll(); });
+  }
+
+  // 저장은 값이 멈춘 뒤 0.35초 후에 한 번만 한다. (끄는 동안 서버에 수십 번 요청하지 않도록)
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { persist(tolMs); }, 350);
+  }
+
+  // ------------------------------------------------------------
+  // 기본값 저장
+  //   서버 모드  : 서버(/api/settings)에 보내서 tempotrace_settings.json 에 저장 → 다음 실행의 기본값이 됨
+  //   파일 모드  : 이 브라우저의 localStorage 에 저장 → 다음에 이 리포트를 열 때 이 값으로 시작
+  // ------------------------------------------------------------
+  function lsRead() { try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) { return null; } }
+  function lsWrite(ms, version) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ ms: ms, version: version })); return true; } catch (e) { return false; }
+  }
+
+  function setStatus(text, warn) {
+    const el = $('saveStatus');
+    el.textContent = text;
+    el.className = 'save-status' + (warn ? ' warn' : '');
+  }
+
+  function persist(ms) {
+    const savedLocal = lsWrite(ms, settingsVersion);
+    if (!SERVED) {
+      setStatus(savedLocal
+        ? '✔ ' + ms + 'ms를 이 브라우저의 기본값으로 저장했습니다. 프로그램의 기본값까지 바꾸려면 터미널에서 python accuracy_test.py --tolerance=' + ms
+        : '이 브라우저에는 저장할 수 없습니다. 프로그램의 기본값을 바꾸려면 터미널에서 python accuracy_test.py --tolerance=' + ms, !savedLocal);
+      return;
+    }
+    fetch('/api/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tolerance_ms: ms })
+    }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function (j) {
+      settingsVersion = j.version;
+      lsWrite(ms, settingsVersion);
+      if (ms === tolMs) setStatus('✔ 기본값을 ' + j.tolerance_ms + 'ms로 저장했습니다. 다음 실행부터 이 값이 기본 기준으로 쓰입니다.');
+    }).catch(function () {
+      setStatus('프로그램에 저장하지 못했습니다. (터미널의 서버가 종료되었을 수 있습니다) 이 브라우저에만 저장했습니다.', true);
+    });
+  }
+
+  // 처음 열 때 쓸 기준값: 서버 모드는 프로그램의 기본값, 파일 모드는 이 브라우저에 저장해 둔 값(있고 최신이면)
+  function initialTolerance(data) {
+    const base = clampTol(data.tolerance_ms || FACTORY_TOL);
+    if (SERVED) return { ms: base, fromBrowser: false };
+    const rec = lsRead();
+    // 프로그램의 설정 세대(version)가 같을 때만 브라우저에 저장된 값을 인정한다.
+    // (그 사이에 --tolerance 로 기본값을 바꿨다면 프로그램 쪽 값이 우선)
+    if (rec && rec.version === (data.settings_version || 0) && validTol(rec.ms)) return { ms: rec.ms, fromBrowser: true };
+    return { ms: base, fromBrowser: false };
+  }
+
+  // ------------------------------------------------------------
+  // 결과 렌더링
+  // ------------------------------------------------------------
+  function renderResult(data) {
+    currentData = data;
+    settingsVersion = data.settings_version || 0;
+
+    const init = initialTolerance(data);
+    tolMs = init.ms;
+    $('toleranceVal').textContent = tolMs;
+    $('toleranceSlider').value = Math.min(tolMs, SLIDER_MAX);
+    $('toleranceInput').value = tolMs;
+
+    if (SERVED) setStatus('기본값 ' + tolMs + 'ms (프로그램 설정에서 불러옴). 값을 바꾸면 자동으로 기본값으로 저장됩니다.');
+    else if (init.fromBrowser) setStatus('이 브라우저에 저장해 둔 기본값 ' + tolMs + 'ms로 시작했습니다.');
+    else setStatus('기본값 ' + tolMs + 'ms로 시작했습니다. 값을 바꾸면 이 브라우저에 기본값으로 저장됩니다.');
+
+    renderAll();
+  }
+
+  // 현재 기준값(tolMs)으로 화면 전체(현재 결과 + 시간대별 분포 + 연습 기록)를 다시 계산해서 그린다.
+  function renderAll() {
+    if (!currentData) return;
+    const d = currentData;
+    const r = compareOnsets(d.original_onsets, getUserOnsets(d), tolMs / 1000);
+
+    const parts = [];
+    if (d.take_name) parts.push('연주 파일: ' + d.take_name);
+    if (d.original_name) parts.push('원곡: ' + d.original_name);
+    parts.push('기준 ' + tolMs + 'ms');
+    $('fileMeta').textContent = parts.join('  ·  ');
+
+    updateStatsAndDraw(d, r.matches, r.missed, r.extra);
+    renderHistory(d);
+  }
+
+  // 창 크기가 바뀌면(모바일 회전 등) 그래프를 새 너비에 맞게 다시 그림
+  let resizeTimer = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderAll, 120);
+  });
+
+  // 내 연주 onset 목록 (예전 JSON에는 user_onsets가 없어서, 있는 정보로 복원)
+  function getUserOnsets(data) {
+    if (data.user_onsets) return data.user_onsets;
+    return data.matched.map(m => m.user).concat(data.extra).sort((a, b) => a - b);
+  }
+
+  // ------------------------------------------------------------
+  // 파이썬 accuracy_test.py의 compare_onsets()를 자바스크립트로 그대로 옮긴 것.
+  // (로직이 다르면 파이썬 결과와 어긋나므로 반드시 같게 유지)
+  // ------------------------------------------------------------
+  function compareOnsets(originalTimes, userTimes, tolerance) {
+    const matches = [];
+    const missed = [];
+    const usedUserIndices = new Set();
+
+    originalTimes.forEach(function (ot) {
+      if (userTimes.length === 0) { missed.push(ot); return; }
+      let bestIdx = -1, bestDiff = Infinity;
+      userTimes.forEach(function (ut, i) {
+        const diff = Math.abs(ut - ot);
+        if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+      });
+      if (bestDiff <= tolerance && !usedUserIndices.has(bestIdx)) {
+        matches.push({ original: ot, user: userTimes[bestIdx], error: bestDiff });
+        usedUserIndices.add(bestIdx);
+      } else {
+        missed.push(ot);
+      }
+    });
+
+    const extra = userTimes.filter(function (t, i) { return !usedUserIndices.has(i); });
+    return { matches, missed, extra };
+  }
+
+  // ------------------------------------------------------------
+  // 시간대별 집계 — 파이썬 compute_segments()와 같은 규칙
+  // ------------------------------------------------------------
+  function segmentCount(duration, segLen) {
+    let n = Math.max(1, Math.ceil(Math.round(duration / segLen * 1000) / 1000));
+    if (n > 1 && (duration - (n - 1) * segLen) < 0.25 * segLen) n -= 1;   // 끝의 짧은 조각은 마지막 구간에 합침
+    return n;
+  }
+
+  function computeSegments(originalOnsets, missed, extra, duration, segLen) {
+    const n = segmentCount(duration, segLen);
+    const segs = [];
+    for (let i = 0; i < n; i++) {
+      segs.push({ start: i * segLen, end: Math.min((i + 1) * segLen, duration), total: 0, missed: 0, extra: 0 });
+    }
+    const idx = t => Math.min(n - 1, Math.max(0, Math.floor(t / segLen)));
+    originalOnsets.forEach(t => { segs[idx(t)].total++; });
+    missed.forEach(t => { segs[idx(t)].missed++; });
+    extra.forEach(t => { segs[idx(t)].extra++; });
+    return segs;
+  }
+
+  function fmtT(t, clock) {
+    if (!clock) return String(Math.round(t * 10) / 10);
+    return Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+  }
+  function segLabel(s, clock) {
+    return clock ? fmtT(s.start, true) : fmtT(s.start, false) + '~' + fmtT(s.end, false) + '초';
+  }
+  function segRangeText(s, clock) {
+    return clock ? fmtT(s.start, true) + '~' + fmtT(s.end, true) : fmtT(s.start) + '~' + fmtT(s.end) + '초';
+  }
+
+  // ------------------------------------------------------------
+  // 현재 연주의 정확도/통계/그래프
+  // ------------------------------------------------------------
+  function updateStatsAndDraw(data, matches, missed, extra) {
+    const accuracy = data.original_onsets.length > 0
+      ? (matches.length / data.original_onsets.length * 100) : 0;
+    const avgErrorMs = matches.length > 0
+      ? (matches.reduce((sum, m) => sum + m.error, 0) / matches.length * 1000) : 0;
+
+    $('accuracyBig').textContent = accuracy.toFixed(1) + '%';
+    $('avgErrorStat').textContent = avgErrorMs.toFixed(1);
+    $('missedStat').textContent = missed.length;
+    $('extraStat').textContent = extra.length;
+
+    drawWave('originalCanvas', data.original_waveform, data.original_duration, [
+      { times: data.original_onsets, color: '#2f5da8' }
+    ]);
+    drawWave('userCanvas', data.user_waveform, data.user_duration, [
+      { times: matches.map(m => m.user), color: '#2f9e5b' },
+      { times: extra, color: '#d64545' }
+    ], missed, data.original_duration);
+
+    drawSegmentSection(data, missed, extra);
+  }
+
+  // 고해상도(레티나/모바일) 화면에서도 선명하게 그리기 위한 캔버스 준비 공통 함수
+  function prepCanvas(id, cssHeight) {
+    const c = $(id);
+    const dpr = window.devicePixelRatio || 1;
+    const w = c.clientWidth;
+    c.style.height = cssHeight + 'px';
+    c.width = Math.round(w * dpr);
+    c.height = Math.round(cssHeight * dpr);
+    const ctx = c.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, cssHeight);
+    return { c: c, ctx: ctx, w: w, h: cssHeight };
+  }
+
+  function drawWave(canvasId, waveform, duration, markerGroups, missedTimes, missedDuration) {
+    const p = prepCanvas(canvasId, 160);
+    const ctx = p.ctx, w = p.w, h = p.h, mid = h / 2;
+
+    ctx.beginPath();
+    ctx.strokeStyle = '#8fa3c2';
+    ctx.lineWidth = 1;
+    waveform.forEach(function (v, i) {
+      const x = (i / waveform.length) * w;
+      const y = mid - v * mid * 0.9;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    markerGroups.forEach(function (group) {
+      ctx.strokeStyle = group.color;
+      ctx.lineWidth = 2;
+      group.times.forEach(function (t) {
+        const x = (t / duration) * w;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      });
+    });
+
+    if (missedTimes) {
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      missedTimes.forEach(function (t) {
+        const x = (t / missedDuration) * w;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      });
+      ctx.setLineDash([]);
+    }
+  }
+
+  // ------------------------------------------------------------
+  // 시간대별 오류 분포 (현재 연주)
+  // ------------------------------------------------------------
+  function drawSegmentSection(data, missed, extra) {
+    const segLen = data.segment_seconds || 2;
+    const segs = computeSegments(data.original_onsets, missed, extra, data.original_duration, segLen);
+    const clock = data.original_duration >= 60;
+
+    const items = segs.map(function (s) {
+      return {
+        label: segLabel(s, clock), missed: s.missed, extra: s.extra,
+        tip: segRangeText(s, clock) + '\n원곡 음 ' + s.total + '개\n놓침 ' + s.missed + ' · 엉뚱 ' + s.extra
+      };
+    });
+    drawStackedBars('segCanvas', items, { height: 210, minMax: 2 });
+
+    const totalErr = segs.reduce((a, s) => a + s.missed + s.extra, 0);
+    const maxErr = Math.max.apply(null, segs.map(s => s.missed + s.extra));
+    if (totalErr === 0) {
+      $('segSummary').textContent = '모든 구간에서 오류가 없습니다. (기준 ' + tolMs + 'ms)';
+    } else {
+      const worst = segs.filter(s => s.missed + s.extra === maxErr);
+      const shown = worst.slice(0, 3).map(s => segRangeText(s, clock)).join(', ');
+      const more = worst.length > 3 ? ' 외 ' + (worst.length - 3) + '곳' : '';
+      $('segSummary').textContent = '가장 많이 틀린 구간: ' + shown + more + ' (구간당 오류 ' + maxErr + '개) · 전체 ' + segs.length + '개 구간 중 오류가 있는 구간 ' + segs.filter(s => s.missed + s.extra > 0).length + '개';
+    }
+  }
+
+  // 막대그래프(놓침=회색, 엉뚱=빨강을 쌓음). 마우스를 올리면 구간 상세가 말풍선으로 표시됨.
+  function drawStackedBars(canvasId, items, o) {
+    const p = prepCanvas(canvasId, o.height || 200);
+    const ctx = p.ctx, w = p.w, h = p.h;
+    const padL = 34, padR = 10, padT = 14, padB = 34;
+    const plotW = w - padL - padR, plotH = h - padT - padB;
+
+    const maxTotal = Math.max.apply(null, [0].concat(items.map(it => it.missed + it.extra)));
+    const yMax = Math.max(o.minMax || 1, Math.ceil(maxTotal));
+    const step = yMax <= 5 ? 1 : Math.ceil(yMax / 5);
+
+    ctx.font = '11px "Malgun Gothic", Arial, sans-serif';
+    ctx.lineWidth = 1;
+    for (let v = 0; v <= yMax; v += step) {
+      const y = padT + plotH - (v / yMax) * plotH;
+      ctx.strokeStyle = '#e3e8ef';
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+      ctx.fillStyle = '#888'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(v), padL - 6, y);
+    }
+
+    const slot = plotW / items.length;
+    const barW = Math.max(3, Math.min(48, slot * 0.62));
+    const labelStep = Math.max(1, Math.ceil(items.length / Math.max(1, Math.floor(plotW / 52))));
+    const bars = [];
+
+    items.forEach(function (it, i) {
+      const cx = padL + slot * (i + 0.5);
+      const x0 = cx - barW / 2;
+      let yBase = padT + plotH;
+      const hm = (it.missed / yMax) * plotH;
+      const he = (it.extra / yMax) * plotH;
+      if (hm > 0) { ctx.fillStyle = '#9aa3b2'; ctx.fillRect(x0, yBase - hm, barW, hm); yBase -= hm; }
+      if (he > 0) { ctx.fillStyle = '#d64545'; ctx.fillRect(x0, yBase - he, barW, he); }
+      if (it.missed + it.extra === 0) { ctx.fillStyle = '#bfe3cd'; ctx.fillRect(x0, padT + plotH - 4, barW, 4); }
+      if (i % labelStep === 0) {
+        ctx.fillStyle = '#555'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.fillText(it.label, cx, padT + plotH + 8);
+      }
+      bars.push({ x0: padL + slot * i, x1: padL + slot * (i + 1), text: it.tip });
+    });
+
+    bindTip(p.c, bars);
+  }
+
+  // 마우스(또는 터치)를 올린 위치의 정보를 말풍선으로 보여주는 공통 함수
+  function bindTip(c, bars) {
+    c._bars = bars;
+    if (c._tipBound) return;
+    c._tipBound = true;
+    const tip = $('tip');
+    function show(e) {
+      const r = c.getBoundingClientRect();
+      const x = e.clientX - r.left;
+      const b = (c._bars || []).find(b => x >= b.x0 && x < b.x1);
+      if (!b) { tip.style.display = 'none'; return; }
+      tip.textContent = b.text;
+      tip.style.display = 'block';
+      let left = e.clientX + 12;
+      if (left + tip.offsetWidth > window.innerWidth - 8) left = e.clientX - tip.offsetWidth - 12;
+      tip.style.left = Math.max(4, left) + 'px';
+      tip.style.top = (e.clientY + 14) + 'px';
+    }
+    c.addEventListener('mousemove', show);
+    c.addEventListener('click', show);
+    // 터치 직후 브라우저가 만들어내는 'mouseleave' 때문에 말풍선이 바로 닫히지 않도록 0.8초간 무시
+    c.addEventListener('touchstart', function () { c._lastTouch = Date.now(); }, { passive: true });
+    c.addEventListener('mouseleave', function () {
+      if (c._lastTouch && Date.now() - c._lastTouch < 800) return;
+      tip.style.display = 'none';
+    });
+  }
+  document.addEventListener('click', function (e) {
+    if (e.target.tagName !== 'CANVAS') $('tip').style.display = 'none';
+  });
+
+  // ------------------------------------------------------------
+  // 반복 연습 기록 (결과 추이) — 현재 기준값으로 모든 회차를 다시 채점
+  // ------------------------------------------------------------
+
+  // 기록 한 건(원본 onset 포함)을 주어진 기준(초)으로 다시 채점한다.
+  function evaluateEntry(h, tolSec) {
+    const r = compareOnsets(h.original_onsets, h.user_onsets, tolSec);
+    const n = h.original_onsets.length;
+    return {
+      acc: n > 0 ? r.matches.length / n * 100 : 0,
+      avg: r.matches.length > 0 ? r.matches.reduce((s, m) => s + m.error, 0) / r.matches.length * 1000 : 0,
+      missed: r.missed.length,
+      extra: r.extra.length,
+      segs: computeSegments(h.original_onsets, r.missed, r.extra, h.original_duration, h.segment_seconds)
+    };
+  }
+
+  function renderHistory(data) {
+    // 원본 onset이 없는 기록(아주 오래된 형식)은 다시 계산할 수 없으므로 제외
+    const hist = (data.history || []).filter(h => Array.isArray(h.original_onsets) && Array.isArray(h.user_onsets));
+    const section = $('historySection');
+    if (!hist.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+
+    const ev = hist.map(h => evaluateEntry(h, tolMs / 1000));          // 모든 회차를 현재 기준으로 재계산
+    const songTotal = data.history_song_total || hist.length;
+    const firstNo = Math.max(1, songTotal - hist.length + 1);          // 표시된 첫 기록의 회차 번호
+
+    const first = ev[0].acc, last = ev[ev.length - 1].acc;
+    if (hist.length === 1) {
+      $('trendSummary').textContent = '연습 기록 ' + songTotal + '회 — 현재 기준 ' + tolMs + 'ms에서 ' + last.toFixed(1) + '%';
+    } else {
+      const diff = last - first, sign = diff > 0 ? '+' : '';
+      $('trendSummary').textContent = '현재 기준 ' + tolMs + 'ms · 최근 ' + hist.length + '회: ' + first.toFixed(1) + '% → ' + last.toFixed(1) + '% (' + sign + diff.toFixed(1) + '%p)';
+    }
+    $('histMeta').textContent = '이 곡의 연습은 모두 ' + songTotal.toLocaleString() + '회이고, 화면에는 최근 ' + hist.length + '회를 표시합니다.'
+      + (data.history_total ? ' 기록 파일(practice_history.json)에는 전체 ' + data.history_total.toLocaleString() + '건이 누적 저장되어 있습니다.' : '');
+
+    drawTrend('trendCanvas', hist, ev, firstNo);
+    renderFrequent(data, hist, ev);
+
+    const body = $('historyBody');
+    body.innerHTML = '';
+    for (let k = hist.length - 1; k >= 0; k--) {
+      const h = hist[k], e = ev[k];
+      const tr = document.createElement('tr');
+      if (k === hist.length - 1) tr.className = 'latest';
+      const cells = [(firstNo + k).toLocaleString() + '회', h.timestamp, h.take, e.acc.toFixed(1) + '%', e.avg.toFixed(1) + 'ms', e.missed, e.extra, h.tolerance_ms + 'ms'];
+      cells.forEach(function (v, ci) {
+        const td = document.createElement('td');
+        td.textContent = v;                               // textContent: 파일 이름에 특수문자가 있어도 안전
+        if (ci === 7 && h.tolerance_ms !== tolMs) td.className = 'old-tol';
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    }
+  }
+
+  // 회차별 정확도 꺾은선 그래프 (현재 기준으로 재계산된 값)
+  function drawTrend(canvasId, hist, ev, firstNo) {
+    const p = prepCanvas(canvasId, 210);
+    const ctx = p.ctx, w = p.w, h = p.h;
+    const padL = 40, padR = 16, padT = 20, padB = 32;
+    const plotW = w - padL - padR, plotH = h - padT - padB;
+    const n = hist.length;
+
+    ctx.font = '11px "Malgun Gothic", Arial, sans-serif';
+    ctx.lineWidth = 1;
+    [0, 25, 50, 75, 100].forEach(function (v) {
+      const y = padT + plotH - (v / 100) * plotH;
+      ctx.strokeStyle = '#e3e8ef';
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+      ctx.fillStyle = '#888'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(v + '%', padL - 6, y);
+    });
+
+    const inner = 14;
+    const xOf = i => n === 1 ? padL + plotW / 2 : padL + inner + (plotW - inner * 2) * (i / (n - 1));
+    const yOf = v => padT + plotH - (Math.max(0, Math.min(100, v)) / 100) * plotH;
+
+    ctx.strokeStyle = '#2f5da8'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ev.forEach(function (e, i) { if (i === 0) ctx.moveTo(xOf(i), yOf(e.acc)); else ctx.lineTo(xOf(i), yOf(e.acc)); });
+    ctx.stroke();
+
+    const labelStep = Math.max(1, Math.ceil(n / Math.max(1, Math.floor(plotW / 52))));
+    const bars = [];
+    ev.forEach(function (e, i) {
+      const x = xOf(i), y = yOf(e.acc), isLast = i === n - 1;
+      ctx.fillStyle = isLast ? '#2f5da8' : '#8fa3c2';
+      ctx.beginPath(); ctx.arc(x, y, isLast ? 6 : 4, 0, Math.PI * 2); ctx.fill();
+      if (n <= 12 || isLast) {
+        ctx.fillStyle = '#2b2b2b'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.fillText(e.acc.toFixed(1) + '%', x, y - 9);
+      }
+      // 라벨은 labelStep 간격으로 표시하되, 마지막 라벨과 너무 가까운 것은 겹치지 않도록 건너뜀
+      if (isLast || (i % labelStep === 0 && (n - 1 - i) >= labelStep)) {
+        ctx.fillStyle = '#555'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.fillText((firstNo + i).toLocaleString() + '회', x, padT + plotH + 8);
+      }
+      const slot = n === 1 ? plotW : (plotW - inner * 2) / (n - 1);
+      const hh = hist[i];
+      bars.push({
+        x0: x - slot / 2, x1: x + slot / 2,
+        text: (firstNo + i).toLocaleString() + '회차 · ' + hh.timestamp + '\n' + hh.take
+          + '\n현재 기준 ' + tolMs + 'ms: ' + e.acc.toFixed(1) + '% · 평균 오차 ' + e.avg.toFixed(1) + 'ms\n놓침 ' + e.missed + ' · 엉뚱 ' + e.extra
+          + '\n(기록 당시 ' + hh.tolerance_ms + 'ms: ' + hh.accuracy.toFixed(1) + '%)'
+      });
+    });
+    bindTip(p.c, bars);
+  }
+
+  // 자주 틀리는 구간: 표시된 회차들의 구간별 오류를 평균 낸 막대그래프 (현재 기준으로 재계산)
+  function renderFrequent(data, hist, ev) {
+    const segLen = data.segment_seconds || 2;
+    const n = segmentCount(data.original_duration, segLen);
+    // 구간 설정이 같은 기록만 사용 (곡이나 구간 길이가 다르면 비교할 수 없으므로)
+    const usable = ev.filter((e, i) => hist[i].segment_seconds === segLen && e.segs.length === n);
+
+    const canvas = $('freqCanvas'), summary = $('freqSummary'), note = $('freqNote');
+    if (usable.length < 2) {
+      canvas.style.display = 'none'; summary.style.display = 'none'; note.style.display = 'block';
+      return;
+    }
+    note.style.display = 'none'; canvas.style.display = 'block'; summary.style.display = 'block';
+
+    const clock = data.original_duration >= 60;
+    const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const items = [];
+    for (let i = 0; i < n; i++) {
+      const s = { start: i * segLen, end: Math.min((i + 1) * segLen, data.original_duration) };
+      const m = avg(usable.map(e => e.segs[i].missed));
+      const x = avg(usable.map(e => e.segs[i].extra));
+      items.push({
+        label: segLabel(s, clock), missed: m, extra: x, range: segRangeText(s, clock),
+        tip: segRangeText(s, clock) + '\n평균 놓침 ' + m.toFixed(1) + ' · 평균 엉뚱 ' + x.toFixed(1) + '\n(' + usable.length + '회 연습 기준, ' + tolMs + 'ms)'
+      });
+    }
+    drawStackedBars('freqCanvas', items, { height: 210, minMax: 1 });
+
+    const maxAvg = Math.max.apply(null, items.map(it => it.missed + it.extra));
+    if (maxAvg === 0) {
+      summary.textContent = '모든 구간에서 오류가 거의 없습니다. (' + usable.length + '회 연습 기준, ' + tolMs + 'ms)';
+    } else {
+      const worst = items.filter(it => Math.abs(it.missed + it.extra - maxAvg) < 1e-9).slice(0, 3).map(it => it.range).join(', ');
+      summary.textContent = '가장 자주 틀리는 구간: ' + worst + ' (평균 오류 ' + maxAvg.toFixed(1) + '개 · ' + usable.length + '회 연습 기준, ' + tolMs + 'ms)';
+    }
+  }
+</script>
+
+</body>
+</html>

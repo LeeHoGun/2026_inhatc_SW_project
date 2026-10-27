@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TempoTrace - 9주차 진행상황</title>
+<style>
+  * { box-sizing: border-box; word-break: keep-all; overflow-wrap: break-word; }
+  body {
+    margin: 0;
+    font-family: '맑은 고딕', 'Malgun Gothic', Arial, sans-serif;
+    background: #eef1f5;
+  }
+  .deck { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+  .slide {
+    display: none;
+    width: 100%; height: 100%;
+    background: #ffffff;
+    padding: 60px 80px 70px;
+    flex-direction: column;
+  }
+  .slide.active { display: flex; }
+
+  .slide-header {
+    border-bottom: 3px solid #2f5da8;
+    padding-bottom: 14px;
+    margin-bottom: 26px;
+  }
+  .slide-header .num { color: #2f5da8; font-weight: bold; font-size: 15px; margin-bottom: 6px; }
+  .slide-header h1 { margin: 0; font-size: 30px; color: #1c1c1c; }
+
+  .content { flex: 1; font-size: 19px; line-height: 1.75; color: #2b2b2b; overflow-y: auto; }
+  .content p { margin: 0 0 12px; }
+
+  ul { margin: 0; padding-left: 22px; }
+  li { margin-bottom: 12px; }
+  li .sub { display: block; font-size: 15px; color: #666; margin-top: 4px; }
+
+  .highlight { color: #2f5da8; font-weight: bold; }
+
+  .box {
+    background: #f4f7fb;
+    border-left: 5px solid #2f5da8;
+    padding: 14px 20px;
+    margin-bottom: 16px;
+  }
+
+  /* 피드백 카드 */
+  .fb { display: flex; gap: 16px; align-items: flex-start; padding: 16px 20px; margin-bottom: 14px;
+        background: #f4f7fb; border-left: 5px solid #2f5da8; border-radius: 4px; }
+  .fb .no { font-size: 26px; font-weight: bold; color: #2f5da8; line-height: 1.2; }
+  .fb .txt { font-size: 19px; line-height: 1.6; }
+  .fb .txt small { display: block; font-size: 14px; color: #777; margin-top: 4px; }
+
+  table.steps { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  table.steps th, table.steps td {
+    border: 1px solid #d3d9e2;
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 16px;
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  table.steps th { background: #2f5da8; color: white; }
+  table.steps td.k { background: #f4f7fb; font-weight: bold; width: 90px; white-space: nowrap; }
+
+  code {
+    background: #f4f7fb;
+    border: 1px solid #d3d9e2;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 0.88em;
+    color: #2f5da8;
+  }
+  pre.cmd {
+    background: #1e2430; color: #e8edf5;
+    padding: 14px 18px; border-radius: 6px;
+    font-size: 15px; line-height: 1.75; margin: 0 0 14px;
+    overflow-x: auto; white-space: pre;
+    font-family: Consolas, 'D2Coding', monospace;
+  }
+  pre.cmd .c { color: #8fa3c2; }
+
+  /* 처리 흐름도 */
+  .flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .flow .node {
+    flex: 1; min-width: 150px; background: #f4f7fb; border: 1px solid #c9d3e3; border-radius: 6px;
+    padding: 12px 12px; text-align: center; font-size: 16px; line-height: 1.5; font-weight: bold; color: #1c1c1c;
+  }
+  .flow .node small { display: block; font-weight: normal; font-size: 13px; color: #666; margin-top: 4px; }
+  .flow .node.key { background: #2f5da8; border-color: #2f5da8; color: #fff; }
+  .flow .node.key small { color: #dbe6fb; }
+  .flow .arrow { align-self: center; color: #2f5da8; font-size: 24px; font-weight: bold; }
+  .flow-back {
+    text-align: center; font-size: 15px; color: #2f5da8; font-weight: bold;
+    border: 1px dashed #2f5da8; border-radius: 6px; padding: 9px 12px; margin-bottom: 18px;
+  }
+
+  /* 글 + 캡처 이미지를 나란히 배치 */
+  .two-col { display: flex; gap: 28px; align-items: flex-start; }
+  .two-col .txt { flex: 1; min-width: 0; }
+  .two-col .pic { flex: 1.2; min-width: 0; text-align: center; }
+  .pair { display: flex; gap: 20px; margin-top: 8px; }
+  .pair .pic { flex: 1; min-width: 0; text-align: center; }
+  img.shot {
+    max-width: 100%; max-height: 330px;
+    border: 1px solid #d3d9e2; border-radius: 4px; cursor: zoom-in;
+  }
+  .pair img.shot { max-height: 290px; }
+  .caption { font-size: 13px; color: #888; margin-top: 6px; line-height: 1.5; }
+  .ph {
+    border: 2px dashed #b9c3d4; color: #7a8699; background: #f7f9fc;
+    border-radius: 6px; padding: 48px 16px; font-size: 14px; text-align: center; line-height: 1.6;
+  }
+
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100; cursor: zoom-out;
+  }
+  .lightbox.on { display: flex; }
+  .lightbox img { max-width: 94vw; max-height: 94vh; border-radius: 4px; background: #fff; }
+
+  .title-slide { justify-content: center; align-items: flex-start; }
+  .title-slide .meta { font-size: 16px; color: #555; margin-bottom: 30px; }
+  .title-slide h1 { font-size: 44px; margin: 0 0 20px 0; color: #1c1c1c; }
+  .title-slide .desc { font-size: 18px; color: #444; max-width: 660px; line-height: 1.7; }
+  .title-slide .badge {
+    display: inline-block;
+    background: #2f5da8; color: white;
+    padding: 6px 14px; border-radius: 4px;
+    font-size: 14px; margin-bottom: 16px;
+  }
+
+  .navbtns {
+    position: fixed; bottom: 16px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 10px; z-index: 10;
+  }
+  .navbtns button {
+    background: #2f5da8; color: white; border: none;
+    padding: 8px 18px; border-radius: 4px;
+    font-size: 14px; cursor: pointer;
+  }
+  .navbtns button:disabled { background: #b9c3d4; cursor: default; }
+
+  @media (max-width: 900px) {
+    .slide { padding: 36px 24px 70px; }
+    .two-col, .pair { flex-direction: column; }
+    .slide-header h1 { font-size: 24px; }
+    .content { font-size: 17px; }
+    .title-slide h1 { font-size: 34px; }
+    .flow .arrow { display: none; }
+  }
+</style>
+<script>
+  // 캡처 이미지가 아직 같은 폴더에 없을 때, 깨진 아이콘 대신 필요한 파일 이름을 안내하는 박스를 보여준다.
+  function imgMissing(img) {
+    const d = document.createElement('div');
+    d.className = 'ph';
+    d.textContent = '캡처 이미지가 필요합니다: ' + img.getAttribute('src') + ' (이 HTML과 같은 폴더에 넣어주세요)';
+    img.replaceWith(d);
+  }
+</script>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <section class="slide active title-slide">
+    <span class="badge">9주차 프로젝트 진행상황 발표</span>
+    <div class="meta">202344058 &nbsp;|&nbsp; 컴퓨터정보과 B반 &nbsp;|&nbsp; 이호건</div>
+    <h1>TempoTrace</h1>
+    <div class="desc">8주차는 시험 기간이어서 진행하지 않았고, 7주차 발표에서 받은 피드백 3가지를 반영한 내용을 보고합니다.<br><br>기준값을 바꾸면 결과 추이까지 바로 바뀌고, 바꾼 값이 기본값이 되며, 기록은 몇 번을 실행해도 빠짐없이 누적되도록 개선했습니다.</div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">01. 7주차 피드백</div><h1>교수님 피드백 3가지</h1></div>
+    <div class="content">
+      <div class="fb"><div class="no">①</div><div class="txt">허용 오차 범위를 바꾸면, 바꾼 값이 <span class="highlight">기본값</span>이 되고 <span class="highlight">결과 추이</span>도 함께 바뀌도록 수정<small>7주차: 기준을 바꿔도 연습 기록(추이)은 그대로였음</small></div></div>
+      <div class="fb"><div class="no">②</div><div class="txt"><span class="highlight">10,000번 실행</span>해도 json에 데이터가 누적되는지 확인<small>7주차: 기록 개수에 제한이 있었고, 많이 쌓였을 때의 동작을 검증하지 않았음</small></div></div>
+      <div class="fb"><div class="no">③</div><div class="txt">기준값(150ms)을 <span class="highlight">페이지 안에서 바로</span> 바꾸고, 바뀐 결과가 <span class="highlight">즉시</span> 나타나도록 구현<small>7주차: 슬라이더는 있었지만 현재 연주 결과만 바뀌었음</small></div></div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">02. 반영 요약</div><h1>무엇이 문제였고, 무엇을 바꿨나</h1></div>
+    <div class="content">
+      <table class="steps">
+        <tr><th></th><th>기존 문제</th><th>이번에 한 것</th></tr>
+        <tr><td class="k">피드백 ①</td><td>연습 기록에는 "그날의 정확도 숫자"만 저장되어, 기준을 바꿔도 과거 회차는 바꿀 수 없었음</td><td>기록마다 <b>onset 원본</b>을 함께 저장하고, 기준이 바뀌면 모든 회차를 다시 채점. 바꾼 값은 <b>기본값으로 저장</b></td></tr>
+        <tr><td class="k">피드백 ②</td><td>기록이 100개를 넘으면 오래된 것부터 삭제됨. 저장할 때마다 파일 전체를 다시 씀</td><td>개수 제한을 없애고 <b>한 줄씩 덧붙이는 방식</b>으로 변경. 10,000회 반복 실행 검증 스크립트 추가</td></tr>
+        <tr><td class="k">피드백 ③</td><td>슬라이더만 있었고, 바꿔도 연습 기록·표는 그대로였음</td><td>슬라이더 + <b>숫자 직접 입력</b> + ±5 버튼. 바꾸는 즉시 <b>페이지 전체</b>가 다시 계산됨</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">03. 피드백 ③ 페이지 안에서 기준값 변경</div><h1>바꾸는 즉시 모든 결과가 바뀜</h1></div>
+    <div class="content">
+      <div class="two-col">
+        <div class="txt">
+          <ul>
+            <li>기준값을 <span class="highlight">슬라이더 / 숫자 직접 입력 / ±5 버튼</span>으로 조정
+              <span class="sub">숫자 입력은 10~1000ms, 범위를 벗어나면 자동 보정</span></li>
+            <li>바꾸는 즉시 아래가 <span class="highlight">모두 한꺼번에</span> 갱신
+              <span class="sub">정확도 · 평균 오차 · 놓친/엉뚱한 음 · 시간대별 분포 · 연습 기록 추이 · 표 · 자주 틀리는 구간</span></li>
+            <li>슬라이더를 빠르게 끌어도 부드럽도록, 화면 갱신은 한 프레임에 한 번만 수행</li>
+          </ul>
+        </div>
+        <div class="pic">
+          <img class="shot" src="week9_page.png" alt="기준값 조정 영역" onerror="imgMissing(this)">
+          <div class="caption">기준값 조정 영역 — 슬라이더, 숫자 입력, ±5 버튼, 되돌리기, 저장 안내</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">04. 피드백 ① 기준값 변경 → 결과 추이 변경</div><h1>같은 기록인데 기준에 따라 추이가 달라짐</h1></div>
+    <div class="content">
+      <ul>
+        <li>기록에 onset 원본이 들어 있어서, 기준을 바꾸면 <span class="highlight">모든 회차를 새 기준으로 다시 채점</span>하여 추이·표·구간 분포를 갱신</li>
+        <li>표에는 '기록 당시 기준'을 함께 남겨서, 지금 기준과 어떻게 다른지 확인 가능</li>
+      </ul>
+      <div class="pair">
+        <div class="pic">
+          <img class="shot" src="week9_tol_low.png" alt="기준 50ms일 때의 연습 기록 추이" onerror="imgMissing(this)">
+          <div class="caption">기준 50ms (엄격하게)</div>
+        </div>
+        <div class="pic">
+          <img class="shot" src="week9_tol_high.png" alt="기준 250ms일 때의 연습 기록 추이" onerror="imgMissing(this)">
+          <div class="caption">기준 250ms (관대하게)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">05. 피드백 ① 바꾼 값이 기본값이 되는 구조</div><h1>페이지에서 바꾼 값이 다음 실행에도 유지됨</h1></div>
+    <div class="content">
+      <div class="flow">
+        <div class="node">python accuracy_test.py<small>연주 분석</small></div>
+        <div class="arrow">→</div>
+        <div class="node">practice_history.json<small>기록 누적 (onset 원본 포함)</small></div>
+        <div class="arrow">→</div>
+        <div class="node">리포트 서버<small>127.0.0.1 (내 컴퓨터 안)</small></div>
+        <div class="arrow">→</div>
+        <div class="node key">브라우저 리포트<small>기준값 변경 → 즉시 재계산</small></div>
+      </div>
+      <div class="flow-back">↩ 바꾼 기준값 → tempotrace_settings.json 에 저장 → 다음 실행의 기본값</div>
+<pre class="cmd"><span class="c"># 분석 + 리포트 서버 실행 (종료: Ctrl+C)</span>
+python accuracy_test.py
+<span class="c"># 기본 기준값을 터미널에서 직접 바꾸기</span>
+python accuracy_test.py --tolerance=200
+<span class="c"># 서버 없이 파일로만 열기</span>
+python accuracy_test.py --no-serve</pre>
+      <ul>
+        <li>웹페이지는 컴퓨터의 파일을 직접 바꿀 수 없어서, <span class="highlight">작은 로컬 서버</span>가 값을 받아 설정 파일에 저장 (내 컴퓨터에서만 접속 가능)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">06. 피드백 ② 10,000번 실행 검증</div><h1>기록이 빠짐없이 누적되는지 확인</h1></div>
+    <div class="content">
+      <div class="two-col">
+        <div class="txt">
+          <ul>
+            <li>기록 개수 제한을 없애고, 새 기록을 파일 끝에 <span class="highlight">한 줄씩 덧붙이는 방식</span>으로 변경
+              <span class="sub">파일 전체를 다시 쓰지 않아서, 기록이 많이 쌓여도 한 건 추가가 전체를 다시 쓰는 방식보다 훨씬 빠름 (캡처의 '1건 추가' 항목)</span></li>
+            <li><code>stress_test.py</code>가 <code>main()</code>을 10,000번 실행한 뒤 자동으로 검증
+              <span class="sub">개수 · id 연속 · 중복 · 필수 항목 · 저장 순서 · 올바른 JSON · 실행 속도</span></li>
+            <li>웹 리포트에는 최근 30건만 불러와서, 기록이 아무리 쌓여도 리포트 크기는 일정
+              <span class="sub">이유: 기준값을 바꿀 때마다 모든 회차를 다시 채점하므로, 전부 담으면 파일이 커지고 화면이 느려짐. 전체 기록은 파일에 그대로 보관</span></li>
+          </ul>
+        </div>
+        <div class="pic">
+          <img class="shot" src="week9_stress.png" alt="10,000회 반복 실행 검증 결과" onerror="imgMissing(this)">
+          <div class="caption">python stress_test.py 실행 결과 (클릭하면 크게 볼 수 있음)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">07. 기록 파일 구조</div><h1>practice_history.json</h1></div>
+    <div class="content">
+<pre class="cmd">[
+{"id":1, "timestamp":"2026-11-03 14:20:05", "original":"original.wav", "take":"my_take.wav",
+ "tolerance_ms":150, "accuracy":87.5, "missed":2, "extra":1,
+ "original_onsets":[0.07, 0.51, ...], "user_onsets":[0.07, 0.55, ...]},
+{"id":2, ...},
+{"id":3, ...}
+]</pre>
+      <ul>
+        <li>파일 전체가 항상 <span class="highlight">올바른 JSON 배열</span>이고, 기록 한 건은 실제 파일에서 정확히 한 줄 <span class="sub">(위 내용은 보기 좋게 줄바꿈한 예시)</span></li>
+        <li><code>id</code>는 1부터 이어지는 번호 — 누락·중복 여부를 바로 검사할 수 있음</li>
+        <li><code>original_onsets</code>·<code>user_onsets</code> — 기준값을 바꿔도 이 회차를 다시 채점할 수 있게 하는 원본 데이터</li>
+        <li>쓰다가 중간에 꺼지거나 일부 줄이 깨져도, 읽을 수 있는 기록은 살리고 복구하도록 처리</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">08. 검증</div><h1>점검한 내용</h1></div>
+    <div class="content">
+      <ul>
+        <li><span class="highlight">파이썬과 웹페이지의 재채점 결과 일치</span> — 기록의 모든 회차를 여러 기준값(10~1000ms)에서 양쪽이 각각 계산해 비교
+          <span class="sub">정확도 · 평균 오차 · 놓친/엉뚱한 음 · 구간별 집계까지 모두 동일</span></li>
+        <li><span class="highlight">기본값 저장</span> — 페이지에서 바꾼 값이 설정 파일에 저장되고, 새로 접속하거나 다시 실행해도 유지됨
+          <span class="sub">슬라이더를 연달아 움직여도 마지막 값만 저장</span></li>
+        <li><span class="highlight">잘못된 요청 차단</span> — 범위를 벗어난 값, 형식 오류, 다른 사이트에서 온 요청은 거부</li>
+        <li><span class="highlight">파일 손상 복구</span> — 쓰다 끊긴 기록, 빈 파일, 이전 형식 파일을 각각 복구하거나 보관 후 새로 시작</li>
+        <li><span class="highlight">10,000회 반복 실행</span> — 기록 누락·중복 없이 누적됨 (06번 캡처)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">09. 이슈 / 보완할 점</div><h1>진행하며 발견한 이슈</h1></div>
+    <div class="content">
+      <ul>
+        <li><b>새로고침하면 옛 기본값으로 열리는 문제</b> — 리포트 파일에 "만들 당시의 값"이 들어 있어서 발생
+          <span class="sub">해결: 서버에서 열 때마다 최신 기본값을 받아오도록 수정</span></li>
+        <li><b>기록이 늘수록 실행 시간이 늘어남</b> — 매 실행마다 기록 파일을 한 번 읽어 개수를 세기 때문 (10,000건에서도 1회 1초 이내)
+          <span class="sub">완화: 한 번만 읽도록 정리, 화면에는 최근 30건만 사용 / 개선 방향: 개수를 따로 저장하는 색인 파일</span></li>
+        <li><b>서버 모드에서는 프로그램이 계속 실행됨</b> — 종료는 Ctrl+C, 서버가 필요 없으면 <code>--no-serve</code></li>
+        <li><b>7주차 이전 형식의 기록은 다시 계산할 수 없음</b> — 원본 onset이 없어서 보관 파일로 옮기고 새로 시작</li>
+        <li><b>동시에 여러 번 실행하는 경우는 고려하지 않음</b> — 한 사람이 한 번에 하나씩 실행하는 상황을 가정</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">10. 다음 계획과 프로젝트 범위</div><h1>다음 주까지 할 일</h1></div>
+    <div class="content">
+      <ul>
+        <li>실제 기타 녹음 결과를 기준값별로 비교·정리해서, 적절한 기본 기준값 결정</li>
+        <li>최종 발표 대비: README 정리, 시연 흐름 정리</li>
+      </ul>
+      <div class="box" style="margin-top:22px;">
+        <b>범위 결정 — 음정(피치) 정확도 분석은 하지 않습니다.</b><br>
+        기타는 여러 줄을 동시에 눌러 소리를 내는 코드 연주가 많고, 하모닉스나 반음·풀 벤딩처럼 음정이 애매하게 변하는 기법도 있어서 음정을 안정적으로 판정하기 어렵다고 판단했습니다.
+        대신 어떤 기법으로 쳐도 "언제 소리가 났는지"는 확인할 수 있으므로, <span class="highlight">박자(타이밍) 정확도</span>에 집중해 완성도를 높입니다.
+      </div>
+    </div>
+  </section>
+
+  <section class="slide title-slide">
+    <h1>이상으로 발표를 마치겠습니다</h1>
+    <div class="desc">감사합니다.</div>
+  </section>
+
+</div>
+
+<div class="lightbox" id="lightbox"><img id="lightboxImg" alt=""></div>
+
+<div class="navbtns">
+  <button id="prevBtn" onclick="go(-1)">이전</button>
+  <span id="pageInfo" style="align-self:center; color:#555; font-size:14px;"></span>
+  <button id="nextBtn" onclick="go(1)">다음</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let idx = 0;
+  function render(){
+    slides.forEach((s,i)=> s.classList.toggle('active', i===idx));
+    document.getElementById('pageInfo').textContent = (idx+1) + ' / ' + slides.length;
+    document.getElementById('prevBtn').disabled = (idx===0);
+    document.getElementById('nextBtn').disabled = (idx===slides.length-1);
+  }
+  function go(delta){
+    idx = Math.min(Math.max(idx+delta,0), slides.length-1);
+    render();
+  }
+  window.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape') closeLightbox();
+    if(e.key==='ArrowRight') go(1);
+    if(e.key==='ArrowLeft') go(-1);
+  });
+
+  // 캡처 이미지를 클릭하면 크게 보여주고, 다시 클릭하거나 Esc를 누르면 닫음 (발표 중 작은 글자 확대용)
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightboxImg');
+  function closeLightbox() { lightbox.classList.remove('on'); }
+  document.querySelectorAll('img.shot').forEach(function (img) {
+    img.addEventListener('click', function () {
+      lightboxImg.src = img.src;
+      lightbox.classList.add('on');
+    });
+  });
+  lightbox.addEventListener('click', closeLightbox);
+  render();
+</script>
+</body>
+</html>

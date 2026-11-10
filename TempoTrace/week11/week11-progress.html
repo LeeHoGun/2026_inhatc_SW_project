@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TempoTrace - 11주차 진행상황</title>
+<style>
+  * { box-sizing: border-box; word-break: keep-all; overflow-wrap: break-word; }
+  body {
+    margin: 0;
+    font-family: '맑은 고딕', 'Malgun Gothic', Arial, sans-serif;
+    background: #eef1f5;
+  }
+  .deck { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+  .slide {
+    display: none;
+    width: 100%; height: 100%;
+    background: #ffffff;
+    padding: 60px 80px 70px;
+    flex-direction: column;
+  }
+  .slide.active { display: flex; }
+
+  .slide-header {
+    border-bottom: 3px solid #2f5da8;
+    padding-bottom: 14px;
+    margin-bottom: 26px;
+  }
+  .slide-header .num { color: #2f5da8; font-weight: bold; font-size: 15px; margin-bottom: 6px; }
+  .slide-header h1 { margin: 0; font-size: 30px; color: #1c1c1c; }
+
+  .content { flex: 1; font-size: 19px; line-height: 1.75; color: #2b2b2b; overflow-y: auto; }
+  .content p { margin: 0 0 12px; }
+
+  ul { margin: 0; padding-left: 22px; }
+  li { margin-bottom: 12px; }
+  li .sub { display: block; font-size: 15px; color: #666; margin-top: 4px; }
+
+  .highlight { color: #2f5da8; font-weight: bold; }
+
+  .box {
+    background: #f4f7fb;
+    border-left: 5px solid #2f5da8;
+    padding: 14px 20px;
+    margin-bottom: 16px;
+  }
+
+  /* 피드백 카드 */
+  .fb { display: flex; gap: 16px; align-items: flex-start; padding: 16px 20px; margin-bottom: 14px;
+        background: #f4f7fb; border-left: 5px solid #2f5da8; border-radius: 4px; }
+  .fb .no { font-size: 26px; font-weight: bold; color: #2f5da8; line-height: 1.2; }
+  .fb .txt { font-size: 19px; line-height: 1.6; }
+  .fb .txt small { display: block; font-size: 14px; color: #777; margin-top: 4px; }
+
+  table.steps { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  table.steps th, table.steps td {
+    border: 1px solid #d3d9e2;
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 16px;
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  table.steps th { background: #2f5da8; color: white; }
+  table.steps td.k { background: #f4f7fb; font-weight: bold; width: 90px; white-space: nowrap; }
+
+  code {
+    background: #f4f7fb;
+    border: 1px solid #d3d9e2;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 0.88em;
+    color: #2f5da8;
+    white-space: nowrap;          /* --offset 같은 옵션이 줄바꿈으로 갈라져 보이지 않게 */
+  }
+  pre.cmd {
+    background: #1e2430; color: #e8edf5;
+    padding: 14px 18px; border-radius: 6px;
+    font-size: 15px; line-height: 1.75; margin: 0 0 14px;
+    overflow-x: auto; white-space: pre;
+    font-family: Consolas, 'D2Coding', monospace;
+  }
+  pre.cmd .c { color: #8fa3c2; }
+
+  /* 처리 흐름도 */
+  .flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .flow .node {
+    flex: 1; min-width: 150px; background: #f4f7fb; border: 1px solid #c9d3e3; border-radius: 6px;
+    padding: 12px 12px; text-align: center; font-size: 16px; line-height: 1.5; font-weight: bold; color: #1c1c1c;
+  }
+  .flow .node small { display: block; font-weight: normal; font-size: 13px; color: #666; margin-top: 4px; }
+  .flow .node.key { background: #2f5da8; border-color: #2f5da8; color: #fff; }
+  .flow .node.key small { color: #dbe6fb; }
+  .flow .arrow { align-self: center; color: #2f5da8; font-size: 24px; font-weight: bold; }
+  .flow-back {
+    text-align: center; font-size: 15px; color: #2f5da8; font-weight: bold;
+    border: 1px dashed #2f5da8; border-radius: 6px; padding: 9px 12px; margin-bottom: 18px;
+  }
+
+  /* 글 + 캡처 이미지를 나란히 배치 */
+  .two-col { display: flex; gap: 28px; align-items: flex-start; }
+  .two-col .txt { flex: 1; min-width: 0; }
+  .two-col .pic { flex: 1.2; min-width: 0; text-align: center; }
+  .pair { display: flex; gap: 20px; margin-top: 8px; }
+  .pair .pic { flex: 1; min-width: 0; text-align: center; }
+  img.shot {
+    max-width: 100%; max-height: 330px;
+    border: 1px solid #d3d9e2; border-radius: 4px; cursor: zoom-in;
+  }
+  .pair img.shot { max-height: 290px; }
+  .caption { font-size: 13px; color: #888; margin-top: 6px; line-height: 1.5; }
+  .ph {
+    border: 2px dashed #b9c3d4; color: #7a8699; background: #f7f9fc;
+    border-radius: 6px; padding: 48px 16px; font-size: 14px; text-align: center; line-height: 1.6;
+  }
+
+  /* 아직 실제 값으로 채우지 않은 칸 (노란 칸) — 발표 전에 모두 바꿔야 함 */
+  .todo { background: #fff3a3; border: 1px dashed #d64545; border-radius: 3px; padding: 0 6px; color: #7a1f1f; font-weight: bold; }
+  #todoBanner {
+    position: fixed; top: 10px; right: 10px; z-index: 200; background: #d64545; color: #fff;
+    padding: 8px 14px; border-radius: 6px; font-size: 14px; font-weight: bold; display: none; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100; cursor: zoom-out;
+  }
+  .lightbox.on { display: flex; }
+  .lightbox img { max-width: 94vw; max-height: 94vh; border-radius: 4px; background: #fff; }
+
+  .title-slide { justify-content: center; align-items: flex-start; }
+  .title-slide .meta { font-size: 16px; color: #555; margin-bottom: 30px; }
+  .title-slide h1 { font-size: 44px; margin: 0 0 20px 0; color: #1c1c1c; }
+  .title-slide .desc { font-size: 18px; color: #444; max-width: 660px; line-height: 1.7; }
+  .title-slide .badge {
+    display: inline-block;
+    background: #2f5da8; color: white;
+    padding: 6px 14px; border-radius: 4px;
+    font-size: 14px; margin-bottom: 16px;
+  }
+
+  .navbtns {
+    position: fixed; bottom: 16px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 10px; z-index: 10;
+  }
+  .navbtns button {
+    background: #2f5da8; color: white; border: none;
+    padding: 8px 18px; border-radius: 4px;
+    font-size: 14px; cursor: pointer;
+  }
+  .navbtns button:disabled { background: #b9c3d4; cursor: default; }
+
+  @media (max-width: 900px) {
+    .slide { padding: 36px 24px 70px; }
+    .two-col, .pair { flex-direction: column; }
+    .slide-header h1 { font-size: 24px; }
+    .content { font-size: 17px; }
+    .title-slide h1 { font-size: 34px; }
+    .flow .arrow { display: none; }
+  }
+</style>
+<script>
+  // 캡처 이미지가 아직 같은 폴더에 없을 때, 깨진 아이콘 대신 필요한 파일 이름을 안내하는 박스를 보여준다.
+  function imgMissing(img) {
+    const d = document.createElement('div');
+    d.className = 'ph';
+    d.textContent = '캡처 이미지가 필요합니다: ' + img.getAttribute('src') + ' (이 HTML과 같은 폴더에 넣어주세요)';
+    img.replaceWith(d);
+  }
+</script>
+</head>
+<body>
+<div class="deck" id="deck">
+  <section class="slide active title-slide">
+    <span class="badge">11주차 프로젝트 진행상황 발표</span>
+    <div class="meta">202344058 &nbsp;|&nbsp; 컴퓨터정보과 B반 &nbsp;|&nbsp; 이호건</div>
+    <h1>TempoTrace</h1>
+    <div class="desc">교수님 피드백을 바탕으로, 기존 원곡 비교(곡 모드)는 그대로 두고 <span class="highlight">BPM 모드</span>를 추가한 내용을 보고합니다.</div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">01. 피드백과 이번 방향</div><h1>무엇을 요청받았고, 어떻게 판단했나</h1></div>
+    <div class="content">
+      <ul>
+        <li><b>피드백</b>: 음정 분석을 다시 추진해 틀린 소리까지 보정하고, 웹사이트로 만들면 좋겠다는 의견</li>
+        <li><b>판단</b>: 기타는 코드·하모닉스·벤딩처럼 음정이 애매한 연주가 많아 음정은 안정적으로 판정하기 어렵다고 보고, <span class="highlight">박자 중심</span>을 유지
+          <span class="sub">대신 박자 쪽에서 쓸모를 넓히는 방향으로 기능을 추가</span></li>
+        <li><b>결정</b>: 기존 곡 모드는 <span class="highlight">그대로 두고</span>, 옵션 하나(<code>--bpm</code>)로 BPM 모드를 추가
+          <span class="sub">옵션을 쓰지 않으면 이전과 완전히 같은 결과가 나오는 것을 확인</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">02. 왜 BPM 모드인가</div><h1>원곡 비교의 한계에서 출발</h1></div>
+    <div class="content">
+      <table class="steps">
+        <tr><th></th><th>곡 모드 (원곡과 비교)</th><th>BPM 모드 (박자 눈금과 비교)</th></tr>
+        <tr><td class="k">필요한 것</td><td>원곡 파일 + 내 연주</td><td>곡의 BPM + 내 연주</td></tr>
+        <tr><td class="k">약점 / 장점</td><td>원곡에 드럼·보컬이 섞이면, 기타가 아닌 소리까지 기준이 됨</td><td>박자만 쓰므로 다른 악기가 섞여도 영향이 적음</td></tr>
+        <tr><td class="k">연습 방식</td><td>원곡 파일을 준비해야 함</td><td>곡을 틀어 놓고 치는 평소 습관 그대로 (BPM은 검색하거나 자동 측정)</td></tr>
+        <tr><td class="k">점수의 뜻</td><td>원곡의 음을 얼마나 맞췄나</td><td>친 소리가 박자 눈금에 얼마나 붙었나</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">03. BPM 모드의 원리</div><h1>BPM으로 눈금을 만들고, 소리가 얼마나 붙었는지 본다</h1></div>
+    <div class="content">
+      <ul>
+        <li><b>눈금 간격</b> = 60 ÷ BPM ÷ 눈금 단위
+          <span class="sub">예: 100 BPM, 8분음표 눈금 → 60 ÷ 100 ÷ 2 = 0.3초 간격. 눈금 단위(4분·8분·16분음표)는 연습할 때마다 고름</span></li>
+        <li><b>눈금 위치는 자동으로 맞춤</b> — 원곡이 없어서 "첫 박이 어디인지" 모르기 때문에, 내가 친 소리들의 분포에서 추정
+          <span class="sub">그래서 녹음을 일찍 시작하거나 늦게 시작해도 같은 점수가 나옴</span></li>
+        <li><b>정확도</b> = 가장 가까운 눈금과의 차이가 <span class="highlight">기준값 이내</span>인 소리의 비율</li>
+        <li>어떤 리듬을 쳐야 하는지는 모르므로 <span class="highlight">"놓친 음"은 판단하지 않음</span> — 박자 정밀도만 평가</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">04. BPM을 정하는 방법</div><h1>검색한 값을 입력하거나, 원곡에서 자동 측정</h1></div>
+    <div class="content">
+      <ul>
+        <li><b>직접 입력</b>: 곡의 BPM을 검색해서 <code>--bpm=100</code> 으로 입력 (소수점도 가능)</li>
+        <li><b>자동 측정</b>: <code>--bpm=auto</code> 또는 <code>--measure-bpm</code> — 원곡의 소리 시작 시각들로 BPM을 추정하고, <span class="highlight">2배·절반 후보</span>도 함께 보여줌</li>
+        <li><b>입력값 점검</b>: 입력한 BPM이 원곡 측정값의 2배·절반이거나 크게 다르면 안내 (원곡을 함께 지정했을 때)</li>
+      </ul>
+<pre class="cmd"><span class="c"># BPM을 직접 입력하고, 8분음표 눈금으로 분석</span>
+python accuracy_test.py --bpm=100 --div=2 내연주.wav
+<span class="c"># 원곡에서 BPM을 자동 측정해서 분석</span>
+python accuracy_test.py --bpm=auto --original=원곡.mp3 내연주.wav
+<span class="c"># BPM만 측정해서 보기</span>
+python accuracy_test.py --measure-bpm --original=원곡.mp3</pre>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">05. BPM 자동 측정의 정확도</div><h1>리듬 모양에 따라 달라지고, 후보로 보완</h1></div>
+    <div class="content">
+      <table class="steps">
+        <tr><th>리듬 모양</th><th>정확히 맞음</th><th>후보(2배·절반) 안에 정답</th></tr>
+        <tr><td class="k">4분음표</td><td>100%</td><td>100%</td></tr>
+        <tr><td class="k">8분음표가 섞임</td><td>82%</td><td>97%</td></tr>
+        <tr><td class="k">엇박이 섞임</td><td>75%</td><td>86%</td></tr>
+        <tr><td class="k">고르게 이어진 8분음표</td><td>0%</td><td>73%</td></tr>
+      </table>
+      <ul style="margin-top:14px;">
+        <li>무작위 리듬으로 패턴마다 200번 시험 (박자 60~180 BPM, 흔들림 15ms) — <code>bpm_test.py</code>로 재현 가능</li>
+        <li>고르게 이어진 8분음표는 "4분음표를 2배 빠르게 친 것"과 소리의 시작 시각만으로는 구분이 안 돼서, <b>사람이 후보를 보고 고르는 구조</b>로 만듦</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">06. 실행 화면</div><h1>웹 리포트가 BPM 모드로 바뀜</h1></div>
+    <div class="content">
+      <div class="two-col">
+        <div class="txt">
+          <ul>
+            <li>정확도와 함께 <span class="highlight">설정 요약</span>(BPM, 눈금 위치, 박자 흔들림, 실제로 친 박자)을 표시</li>
+            <li><span class="highlight">우연히 맞을 확률</span>을 함께 보여줘서, 점수가 의미 있는지 판단할 수 있음</li>
+            <li>점수를 믿기 어려운 경우(눈금에 안 모임, BPM이 부정확함, 기준값이 너무 큼)는 <b>안내 문구</b>로 알려줌</li>
+            <li>기준값 조정, 즉시 재계산, 기본값 저장은 곡 모드와 같고, <b>BPM 모드의 기준값은 따로 저장</b></li>
+          </ul>
+        </div>
+        <div class="pic">
+          <img class="shot" src="week11_bpm.png" alt="BPM 모드 결과 화면" onerror="imgMissing(this)">
+          <div class="caption">BPM 모드 결과 화면 (클릭하면 크게 볼 수 있음)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">07. 눈금에서 벗어난 정도</div><h1>소리 하나하나가 박자에서 얼마나 벗어났나</h1></div>
+    <div class="content">
+      <div class="two-col">
+        <div class="txt">
+          <ul>
+            <li>친 소리를 시간 순서로 점으로 찍고, <span class="highlight">0선에 가까울수록 정확</span> (위 = 늦게, 아래 = 빨리)</li>
+            <li>초록 띠는 지금의 기준값 범위 — 기준값을 바꾸면 띠가 바로 달라짐</li>
+            <li>점수 하나로는 안 보이는 <b>"점점 빨라지는 경향"</b>이 점들의 흐름으로 보임</li>
+            <li>시간대별 오류 분포, 기준값별 곡선(빨간 점선 = 우연히 맞을 확률), 연습 기록 추이도 BPM 모드로 제공</li>
+          </ul>
+        </div>
+        <div class="pic">
+          <img class="shot" src="week11_dev.png" alt="눈금 편차 그래프" onerror="imgMissing(this)">
+          <div class="caption">점점 빨라지는 연주의 눈금 편차 그래프</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">08. 점수 읽는 법</div><h1>몇 ms 흔들리면 몇 %가 나오나</h1></div>
+    <div class="content">
+      <table class="steps">
+        <tr><th>박자 흔들림(표준편차)</th><th>정확도 평균</th><th>눈금 집중도 평균</th></tr>
+        <tr><td class="k">10ms</td><td>100.0%</td><td>0.99</td></tr>
+        <tr><td class="k">30ms</td><td>90.7%</td><td>0.95</td></tr>
+        <tr><td class="k">50ms</td><td>69.9%</td><td>0.88</td></tr>
+        <tr><td class="k">80ms</td><td>48.6%</td><td>0.72</td></tr>
+        <tr><td class="k">아무렇게나 침</td><td>22.2% (상위 5%는 38%)</td><td>0.17</td></tr>
+      </table>
+      <div class="box" style="margin-top:14px;">
+        <b>100 BPM, 4분음표 눈금, 기준값 50ms</b> 조건이고, 우연히 맞을 확률은 17%입니다.
+        아무렇게나 쳐도 눈금 위치를 자동으로 맞추는 만큼 기준선보다 높게 나오므로, <span class="highlight">눈금 집중도가 0.5 미만이면 경고</span>하고, 기준값은 눈금 간격의 절반 이하로 제한하도록 안내합니다.
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">09. 검증</div><h1>점검한 내용</h1></div>
+    <div class="content">
+      <ul>
+        <li><span class="highlight">곡 모드가 달라지지 않았는지</span> — 같은 입력으로 10주차와 비교해 설정 파일, 분석 결과, 연습 기록(8건)이 모두 같음
+          <span class="sub">10,000번 반복 실행도 다시 통과: 기록 10,000건, 누락·중복 없음, 기록 한 건 추가에 0.02ms</span></li>
+        <li><span class="highlight">파이썬과 웹 화면이 같은 값인지</span> — 무작위 400건 × 기준값 6개(2,400개 조합), 기준값별 곡선 11,880개 조합에서 불일치 0개</li>
+        <li><span class="highlight">BPM 모드 반복 실행</span> — 1,000번 실행에서 기록 누락·중복 없음</li>
+        <li><span class="highlight">설정 저장</span> — BPM 모드의 기준값이 곡 모드와 따로 저장되고, 곡 기록과 BPM 기록이 섞이지 않음. 잘못된 요청은 차단</li>
+        <li><span class="highlight">입력 오류</span> — 범위를 벗어난 BPM, 눈금 위치가 어긋난 녹음, 기준값이 너무 큰 경우를 각각 시험</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">10. 한계</div><h1>아직 남은 한계</h1></div>
+    <div class="content">
+      <ul>
+        <li><b>점수의 의미가 달라짐</b>: BPM 모드는 "곡을 얼마나 똑같이 쳤나"가 아니라 <b>"박자 눈금에 얼마나 붙었나"</b>이고, 틀린 리듬을 쳐도 눈금에 붙으면 높게 나옴</li>
+        <li><b>눈금 위치를 자동으로 맞추므로</b> 아무렇게나 쳐도 평균 22%가 나옴 → 눈금 집중도를 함께 봐야 함</li>
+        <li><b>BPM 자동 측정</b>은 고르게 이어진 8분음표에서 2배로 잡힘 → 후보를 보고 사람이 선택</li>
+        <li>템포가 변하는 곡은 BPM이 하나로 잡히지 않아 부정확함 (일정한 템포의 곡 대상)</li>
+        <li>실제 기타 녹음, 특히 코드를 칠 때 여러 줄이 시간차로 울리는 경우의 검증은 앞으로 진행</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">11. 다음 계획</div><h1>다음 주까지 할 일</h1></div>
+    <div class="content">
+      <ul>
+        <li><b>자동 녹음</b>: BPM을 정하고 실행하면 재생과 동시에 녹음이 시작되는 기능 (웹 버전에서 구현)</li>
+        <li><b>탭 템포</b>: 곡을 들으며 버튼을 박자에 맞춰 눌러 BPM을 입력하는 기능</li>
+        <li><b>웹 배포</b>: 분석 부분을 브라우저에서 돌아가게 옮기고 GitHub Pages로 공개</li>
+        <li>실제 기타 녹음으로 기본 기준값과 눈금 단위가 알맞은지 확인</li>
+        <li>README 정리 (문제, 해결, 결과, 실행 방법, 스크린샷 순서)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide title-slide">
+    <h1>이상으로 발표를 마치겠습니다</h1>
+    <div class="desc">감사합니다.</div>
+  </section>
+
+</div>
+
+<div class="lightbox" id="lightbox"><img id="lightboxImg" alt=""></div>
+
+<div class="navbtns">
+  <button id="prevBtn" onclick="go(-1)">이전</button>
+  <span id="pageInfo" style="align-self:center; color:#555; font-size:14px;"></span>
+  <button id="nextBtn" onclick="go(1)">다음</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let idx = 0;
+  function render(){
+    slides.forEach((s,i)=> s.classList.toggle('active', i===idx));
+    document.getElementById('pageInfo').textContent = (idx+1) + ' / ' + slides.length;
+    document.getElementById('prevBtn').disabled = (idx===0);
+    document.getElementById('nextBtn').disabled = (idx===slides.length-1);
+  }
+  function go(delta){
+    idx = Math.min(Math.max(idx+delta,0), slides.length-1);
+    render();
+  }
+  window.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape') closeLightbox();
+    if(e.key==='ArrowRight') go(1);
+    if(e.key==='ArrowLeft') go(-1);
+  });
+
+  // 캡처 이미지를 클릭하면 크게 보여주고, 다시 클릭하거나 Esc를 누르면 닫음 (발표 중 작은 글자 확대용)
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightboxImg');
+  function closeLightbox() { lightbox.classList.remove('on'); }
+  document.querySelectorAll('img.shot').forEach(function (img) {
+    img.addEventListener('click', function () {
+      lightboxImg.src = img.src;
+      lightbox.classList.add('on');
+    });
+  });
+  lightbox.addEventListener('click', closeLightbox);
+  render();
+</script>
+</body>
+</html>

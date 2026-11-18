@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TempoTrace - 12주차 진행상황</title>
+<style>
+  * { box-sizing: border-box; word-break: keep-all; overflow-wrap: break-word; }
+  body {
+    margin: 0;
+    font-family: '맑은 고딕', 'Malgun Gothic', Arial, sans-serif;
+    background: #eef1f5;
+  }
+  .deck { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+  .slide {
+    display: none;
+    width: 100%; height: 100%;
+    background: #ffffff;
+    padding: 60px 80px 70px;
+    flex-direction: column;
+  }
+  .slide.active { display: flex; }
+
+  .slide-header {
+    border-bottom: 3px solid #2f5da8;
+    padding-bottom: 14px;
+    margin-bottom: 26px;
+  }
+  .slide-header .num { color: #2f5da8; font-weight: bold; font-size: 15px; margin-bottom: 6px; }
+  .slide-header h1 { margin: 0; font-size: 30px; color: #1c1c1c; }
+
+  .content { flex: 1; font-size: 19px; line-height: 1.75; color: #2b2b2b; overflow-y: auto; }
+  .content p { margin: 0 0 12px; }
+
+  ul { margin: 0; padding-left: 22px; }
+  li { margin-bottom: 12px; }
+  li .sub { display: block; font-size: 15px; color: #666; margin-top: 4px; }
+
+  .highlight { color: #2f5da8; font-weight: bold; }
+
+  .box {
+    background: #f4f7fb;
+    border-left: 5px solid #2f5da8;
+    padding: 14px 20px;
+    margin-bottom: 16px;
+  }
+
+  /* 피드백 카드 */
+  .fb { display: flex; gap: 16px; align-items: flex-start; padding: 16px 20px; margin-bottom: 14px;
+        background: #f4f7fb; border-left: 5px solid #2f5da8; border-radius: 4px; }
+  .fb .no { font-size: 26px; font-weight: bold; color: #2f5da8; line-height: 1.2; }
+  .fb .txt { font-size: 19px; line-height: 1.6; }
+  .fb .txt small { display: block; font-size: 14px; color: #777; margin-top: 4px; }
+
+  table.steps { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  table.steps th, table.steps td {
+    border: 1px solid #d3d9e2;
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 16px;
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  table.steps th { background: #2f5da8; color: white; }
+  table.steps td.k { background: #f4f7fb; font-weight: bold; width: 90px; white-space: nowrap; }
+
+  code {
+    background: #f4f7fb;
+    border: 1px solid #d3d9e2;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 0.88em;
+    color: #2f5da8;
+    white-space: nowrap;          /* --offset 같은 옵션이 줄바꿈으로 갈라져 보이지 않게 */
+  }
+  pre.cmd {
+    background: #1e2430; color: #e8edf5;
+    padding: 14px 18px; border-radius: 6px;
+    font-size: 15px; line-height: 1.75; margin: 0 0 14px;
+    overflow-x: auto; white-space: pre;
+    font-family: Consolas, 'D2Coding', monospace;
+  }
+  pre.cmd .c { color: #8fa3c2; }
+
+  /* 처리 흐름도 */
+  .flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .flow .node {
+    flex: 1; min-width: 150px; background: #f4f7fb; border: 1px solid #c9d3e3; border-radius: 6px;
+    padding: 12px 12px; text-align: center; font-size: 16px; line-height: 1.5; font-weight: bold; color: #1c1c1c;
+  }
+  .flow .node small { display: block; font-weight: normal; font-size: 13px; color: #666; margin-top: 4px; }
+  .flow .node.key { background: #2f5da8; border-color: #2f5da8; color: #fff; }
+  .flow .node.key small { color: #dbe6fb; }
+  .flow .arrow { align-self: center; color: #2f5da8; font-size: 24px; font-weight: bold; }
+  .flow-back {
+    text-align: center; font-size: 15px; color: #2f5da8; font-weight: bold;
+    border: 1px dashed #2f5da8; border-radius: 6px; padding: 9px 12px; margin-bottom: 18px;
+  }
+
+  /* 글 + 캡처 이미지를 나란히 배치 */
+  .two-col { display: flex; gap: 28px; align-items: flex-start; }
+  .two-col .txt { flex: 1; min-width: 0; }
+  .two-col .pic { flex: 1.2; min-width: 0; text-align: center; }
+  .pair { display: flex; gap: 20px; margin-top: 8px; }
+  .pair .pic { flex: 1; min-width: 0; text-align: center; }
+  img.shot {
+    max-width: 100%; max-height: 330px;
+    border: 1px solid #d3d9e2; border-radius: 4px; cursor: zoom-in;
+  }
+  .pair img.shot { max-height: 290px; }
+  .caption { font-size: 13px; color: #888; margin-top: 6px; line-height: 1.5; }
+  .ph {
+    border: 2px dashed #b9c3d4; color: #7a8699; background: #f7f9fc;
+    border-radius: 6px; padding: 48px 16px; font-size: 14px; text-align: center; line-height: 1.6;
+  }
+
+  /* 아직 실제 값으로 채우지 않은 칸 (노란 칸) — 발표 전에 모두 바꿔야 함 */
+  .todo { background: #fff3a3; border: 1px dashed #d64545; border-radius: 3px; padding: 0 6px; color: #7a1f1f; font-weight: bold; }
+  #todoBanner {
+    position: fixed; top: 10px; right: 10px; z-index: 200; background: #d64545; color: #fff;
+    padding: 8px 14px; border-radius: 6px; font-size: 14px; font-weight: bold; display: none; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100; cursor: zoom-out;
+  }
+  .lightbox.on { display: flex; }
+  .lightbox img { max-width: 94vw; max-height: 94vh; border-radius: 4px; background: #fff; }
+
+  .title-slide { justify-content: center; align-items: flex-start; }
+  .title-slide .meta { font-size: 16px; color: #555; margin-bottom: 30px; }
+  .title-slide h1 { font-size: 44px; margin: 0 0 20px 0; color: #1c1c1c; }
+  .title-slide .desc { font-size: 18px; color: #444; max-width: 660px; line-height: 1.7; }
+  .title-slide .badge {
+    display: inline-block;
+    background: #2f5da8; color: white;
+    padding: 6px 14px; border-radius: 4px;
+    font-size: 14px; margin-bottom: 16px;
+  }
+
+  .navbtns {
+    position: fixed; bottom: 16px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 10px; z-index: 10;
+  }
+  .navbtns button {
+    background: #2f5da8; color: white; border: none;
+    padding: 8px 18px; border-radius: 4px;
+    font-size: 14px; cursor: pointer;
+  }
+  .navbtns button:disabled { background: #b9c3d4; cursor: default; }
+
+  @media (max-width: 900px) {
+    .slide { padding: 36px 24px 70px; }
+    .two-col, .pair { flex-direction: column; }
+    .slide-header h1 { font-size: 24px; }
+    .content { font-size: 17px; }
+    .title-slide h1 { font-size: 34px; }
+    .flow .arrow { display: none; }
+  }
+</style>
+<script>
+  // 캡처 이미지가 아직 같은 폴더에 없을 때, 깨진 아이콘 대신 필요한 파일 이름을 안내하는 박스를 보여준다.
+  function imgMissing(img) {
+    const d = document.createElement('div');
+    d.className = 'ph';
+    d.textContent = '캡처 이미지가 필요합니다: ' + img.getAttribute('src') + ' (이 HTML과 같은 폴더에 넣어주세요)';
+    img.replaceWith(d);
+  }
+</script>
+</head>
+<body>
+<div class="deck" id="deck">
+  <section class="slide active title-slide">
+    <span class="badge">12주차 프로젝트 진행상황 발표</span>
+    <div class="meta">202344058 &nbsp;|&nbsp; 컴퓨터정보과 B반 &nbsp;|&nbsp; 이호건</div>
+    <h1>TempoTrace</h1>
+    <div class="desc">BPM 모드에 <span class="highlight">자동 녹음</span>과 <span class="highlight">탭 템포</span>를 더해서, 녹음 파일을 따로 옮기지 않고 한 화면에서 연습하고 분석하도록 만든 내용을 보고합니다.</div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">01. 이번 주 목표</div><h1>남은 기간에 맞춰 범위를 정했다</h1></div>
+    <div class="content">
+      <ul>
+        <li><b>지난주 계획</b>: 자동 녹음, 탭 템포, 웹 배포(분석까지 브라우저로 이식)</li>
+        <li><b>종강까지 약 2주</b>가 남아서, 끝까지 완성할 수 있는 범위로 조정
+          <span class="sub">분석 코드(librosa)를 자바스크립트로 다시 만드는 일은 검증 비용이 커서 이번 학기 범위에서 제외</span></li>
+        <li><b>이번 주 구현</b>
+          <span class="sub">① 자동 녹음 (BPM 설정 → 카운트 → 메트로놈과 함께 녹음 → 바로 분석) &nbsp; ② 탭 템포 &nbsp; ③ 웹에 올릴 수 있는 녹음 페이지</span></li>
+        <li><b>유지한 것</b>: 곡 모드와 기존 BPM 모드는 변경 없이 그대로 (11주차와 같은 결과임을 확인)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">02. 왜 자동 녹음인가</div><h1>연습 한 번에 거치던 단계를 줄였다</h1></div>
+    <div class="content">
+      <table class="steps">
+        <tr><th></th><th>11주차까지</th><th>12주차</th></tr>
+        <tr><td class="k">녹음</td><td>스마트폰 녹음 앱으로 따로 녹음</td><td>브라우저에서 바로 녹음</td></tr>
+        <tr><td class="k">박자</td><td>메트로놈 앱을 따로 켜야 함</td><td>BPM을 정하면 메트로놈이 같이 나옴</td></tr>
+        <tr><td class="k">파일 옮기기</td><td>파일을 컴퓨터로 옮겨 이름을 맞춤</td><td>자동으로 저장되고 분석 요청까지 진행</td></tr>
+        <tr><td class="k">분석 실행</td><td>터미널에 명령어 입력</td><td>정지 버튼을 누르면 바로 결과 표시</td></tr>
+        <tr><td class="k">BPM 입력</td><td>검색하거나 원곡에서 자동 측정</td><td>위 방법에 더해 <b>박자에 맞춰 버튼을 눌러서</b> 측정</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">03. 사용 흐름</div><h1>BPM 정하기부터 결과 확인까지</h1></div>
+    <div class="content">
+      <div class="flow">
+        <div class="node">BPM 정하기<small>직접 입력 / 탭 템포</small></div><div class="arrow">→</div>
+        <div class="node">4박 카운트<small>메트로놈 소리</small></div><div class="arrow">→</div>
+        <div class="node key">녹음<small>메트로놈과 함께</small></div><div class="arrow">→</div>
+        <div class="node">업로드<small>내 컴퓨터의 서버로</small></div><div class="arrow">→</div>
+        <div class="node key">BPM 모드 분석<small>기존 분석 그대로</small></div><div class="arrow">→</div>
+        <div class="node">결과 리포트<small>연습 기록에 누적</small></div>
+      </div>
+      <div class="flow-back">녹음 파일은 recordings 폴더에 저장되고, 분석 결과는 11주차의 BPM 모드 기록과 같은 파일에 쌓임</div>
+      <ul>
+        <li>분석은 <b>내 컴퓨터에서만</b> 돌아가고, 서버는 <code>127.0.0.1</code> 주소로만 열림 (같은 와이파이의 다른 기기는 접속 불가)</li>
+        <li>정확도 계산, 기준값, 연습 기록 등 <span class="highlight">분석 부분은 새로 만들지 않고 11주차 BPM 모드를 그대로 호출</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">04. 실행 방법</div><h1>옵션 하나로 녹음 페이지가 열린다</h1></div>
+    <div class="content">
+<pre class="cmd"><span class="c"># 녹음 페이지 열기 (BPM과 눈금 단위를 미리 채워서)</span>
+python accuracy_test.py --record --bpm=100 --div=2
+<span class="c"># BPM은 페이지에서 정하고 싶을 때</span>
+python accuracy_test.py --record</pre>
+      <ul>
+        <li><b>이어폰이나 헤드폰 착용</b>이 필요함 — 스피커로 나온 메트로놈 소리가 마이크에 들어가면 연주가 아닌 클릭까지 분석됨
+          <span class="sub">그래서 안내 문구를 화면 맨 위와 터미널에 모두 표시</span></li>
+        <li>녹음 길이는 15초 / 30초 / 60초 / 직접 정지 중에서 선택</li>
+        <li>BPM 모드의 기준값은 곡 모드와 따로 저장된 값을 사용 (리포트에서 바꾸면 모든 기록이 다시 계산됨)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">05. 구현 포인트</div><h1>녹음이 박자 분석에 맞게 만들어지도록 한 부분</h1></div>
+    <div class="content">
+      <table class="steps">
+        <tr><th>문제</th><th>해결</th></tr>
+        <tr><td class="k">메트로놈이 흔들리면 연습 기준이 흔들림</td><td>소리를 "지금" 내지 않고, 브라우저 오디오 시계에 <b>0.15초 앞서 예약</b>하는 방식 — 화면이 잠깐 느려져도 박자는 일정</td></tr>
+        <tr><td class="k">마이크 처리가 소리 시작을 뭉갬</td><td>에코 제거, 잡음 억제, 자동 음량 조절을 <b>모두 끄고</b> 녹음</td></tr>
+        <tr><td class="k">녹음 파일 변환</td><td>브라우저가 받은 소리를 <b>wav로 직접 만들어서</b> 보냄 → ffmpeg 변환 없이 기존 분석에 바로 사용</td></tr>
+        <tr><td class="k">카운트 소리가 분석에 섞임</td><td>4박 카운트가 끝나는 박에 맞춰 녹음을 시작</td></tr>
+        <tr><td class="k">기기마다 다른 소리 지연</td><td>BPM 모드는 눈금 위치를 연주에서 자동으로 맞추므로 <b>일정한 지연은 점수에 영향 없음</b></td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">06. 탭 템포</div><h1>박자에 맞춰 버튼을 누르면 BPM이 계산된다</h1></div>
+    <div class="content">
+      <ul>
+        <li><b>방법</b>: 곡을 들으며 버튼을 4번 이상 누르면, 누른 간격의 <span class="highlight">중앙값</span>으로 BPM을 계산 (최근 8번만 사용)
+          <span class="sub">평균 대신 중앙값을 써서 한 번 삐끗하게 눌러도 결과가 거의 변하지 않게 함 &nbsp;|&nbsp; 2초 넘게 쉬면 처음부터 다시</span></li>
+      </ul>
+      <table class="steps" style="margin-top:8px;">
+        <tr><th>누른 간격</th><th>계산된 BPM</th></tr>
+        <tr><td class="k">600ms × 5번 (= 100 BPM)</td><td>100</td></tr>
+        <tr><td class="k">600ms 중 한 번만 700ms</td><td>100 (튄 한 번이 반영되지 않음)</td></tr>
+        <tr><td class="k">500ms × 7번 (= 120 BPM)</td><td>120</td></tr>
+        <tr><td class="k">220ms × 5번 (= 273 BPM)</td><td>272 (정수로 반올림하는 과정의 차이)</td></tr>
+      </table>
+      <ul style="margin-top:12px;">
+        <li>누른 시각은 사람이 누르는 속도에 영향을 받으므로, 계산된 값은 <b>바로 메트로놈으로 들어보고</b> 맞는지 확인하도록 미리 듣기 버튼을 둠</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">07. 실행 화면</div><h1>녹음 페이지와 분석 결과</h1></div>
+    <div class="content">
+      <div class="pair">
+        <div class="pic">
+          <img class="shot" src="week12_record.png" alt="녹음 페이지" onerror="imgMissing(this)">
+          <div class="caption">녹음 페이지 (BPM, 탭 템포, 메트로놈, 녹음 버튼)</div>
+        </div>
+        <div class="pic">
+          <img class="shot" src="week12_result.png" alt="녹음 직후 결과" onerror="imgMissing(this)">
+          <div class="caption">녹음 직후 분석 결과와 리포트 (클릭하면 크게 볼 수 있음)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">08. 업로드 안전성</div><h1>내 컴퓨터로 올라오는 파일을 검사한다</h1></div>
+    <div class="content">
+      <table class="steps">
+        <tr><th>들어온 요청</th><th>처리</th></tr>
+        <tr><td class="k">다른 사이트에서 보낸 요청, 다른 주소(Host)로 온 요청</td><td>거부 (403)</td></tr>
+        <tr><td class="k">wav가 아닌 형식 / 헤더만 wav인 파일 / 빈 내용</td><td>거부 (415 / 400 / 422), 분석에 실패한 파일은 저장하지 않음</td></tr>
+        <tr><td class="k">80MB 초과 (1GB라고 선언한 요청 포함)</td><td>내용을 읽기 전에 거부 (413)</td></tr>
+        <tr><td class="k">범위 밖의 BPM(999), 없는 눈금 단위(3), BPM 누락</td><td>거부 (400)</td></tr>
+        <tr><td class="k">무음 녹음 (소리 4개 미만)</td><td>안내만 하고 기록에 남기지 않음 — 0%가 연습 기록에 섞이지 않도록</td></tr>
+      </table>
+      <ul style="margin-top:12px;">
+        <li>저장 파일 이름은 <b>서버가 시각으로 정함</b> — 보낸 쪽이 준 이름을 쓰지 않으므로 다른 폴더에 쓰는 공격이 불가능</li>
+        <li>위 요청을 모두 보내 본 뒤에도 서버가 꺼지지 않고 정상 응답함을 확인</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">09. 검증</div><h1>점검한 내용</h1></div>
+    <div class="content">
+      <ul>
+        <li><span class="highlight">기존 기능이 달라지지 않았는지</span> — 곡 모드 3가지, BPM 모드 3가지, BPM 측정 1가지를 11주차 코드와 같은 입력으로 비교
+          <span class="sub">화면 출력, 분석 결과, 연습 기록, 리포트 데이터가 모두 같음 (기록 시각만 다름)</span></li>
+        <li><span class="highlight">기존 테스트 재실행</span> — BPM 테스트, 시작 위치 보정 테스트, 2,000번 반복 실행 모두 통과</li>
+        <li><span class="highlight">녹음 전체 흐름</span> — 브라우저에서 녹음 시작 → 업로드 → 분석 → 기록 저장 → 리포트 갱신까지 자동 테스트로 확인하고, <b>실제 기타를 연결해 직접 녹음</b>해서도 결과 화면까지 나오는 것을 확인</li>
+        <li><span class="highlight">메트로놈</span> — 120 BPM에서 예약된 클릭 9개의 간격이 모두 500ms로 일치 (예약 시각 기준)</li>
+        <li><span class="highlight">입력 오류</span> — 잘못된 BPM, 너무 짧은 녹음, 마이크 거부, 분석 서버가 없는 경우를 각각 시험</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">10. 한계</div><h1>아직 남은 한계</h1></div>
+    <div class="content">
+      <ul>
+        <li><b>이어폰이 필수</b>: 스피커로 메트로놈을 들으면 클릭 소리가 연주로 분석됨 (페이지와 터미널에 안내)</li>
+        <li><b>웹에 올리는 것은 녹음 페이지까지</b>: 웹 배포 상태에서는 메트로놈, 탭 템포, 녹음, wav 저장만 가능하고 <b>분석은 내 컴퓨터의 프로그램</b>에서 함
+          <span class="sub">librosa 분석을 브라우저로 옮기는 작업은 종강 전에 검증까지 끝내기 어려워 제외</span></li>
+        <li><b>메트로놈 소리가 실제로 나오는 시각</b>은 기기와 무선 이어폰의 지연에 따라 달라짐. 일정한 지연은 점수에 영향이 없지만, 지연이 들쭉날쭉하면 영향이 있을 수 있음</li>
+        <li>실제 기타로 한 번 녹음해 동작은 확인했지만, <b>여러 곡과 코드 연주</b>에서 기본 기준값(50ms)과 눈금 단위가 알맞은지는 앞으로 확인</li>
+        <li>템포가 변하는 곡은 BPM이 하나로 잡히지 않아 부정확함 (일정한 템포의 곡 대상)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="slide-header"><div class="num">11. 남은 계획</div><h1>종강까지 할 일</h1></div>
+    <div class="content">
+      <ul>
+        <li><b>다음 주</b>
+          <span class="sub">여러 곡·여러 번의 기타 녹음으로 기본 기준값과 눈금 단위가 알맞은지 확인 &nbsp;|&nbsp; 결과를 캡처와 숫자로 정리</span></li>
+        <li><b>README 정리</b>: 문제 → 해결 → 결과(숫자) → 실행 방법 → 스크린샷 순서로 작성</li>
+        <li><b>웹 공개</b>: 녹음 페이지를 GitHub Pages에 올려 접속 주소를 README에 연결</li>
+        <li><b>마지막 주</b>: 최종 발표 자료 정리와 전체 흐름 점검 (새 기능은 추가하지 않고 안정화에 집중)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide title-slide">
+    <h1>이상으로 발표를 마치겠습니다</h1>
+    <div class="desc">감사합니다.</div>
+  </section>
+
+</div>
+
+<div class="lightbox" id="lightbox"><img id="lightboxImg" alt=""></div>
+
+<div class="navbtns">
+  <button id="prevBtn" onclick="go(-1)">이전</button>
+  <span id="pageInfo" style="align-self:center; color:#555; font-size:14px;"></span>
+  <button id="nextBtn" onclick="go(1)">다음</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let idx = 0;
+  function render(){
+    slides.forEach((s,i)=> s.classList.toggle('active', i===idx));
+    document.getElementById('pageInfo').textContent = (idx+1) + ' / ' + slides.length;
+    document.getElementById('prevBtn').disabled = (idx===0);
+    document.getElementById('nextBtn').disabled = (idx===slides.length-1);
+  }
+  function go(delta){
+    idx = Math.min(Math.max(idx+delta,0), slides.length-1);
+    render();
+  }
+  window.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape') closeLightbox();
+    if(e.key==='ArrowRight') go(1);
+    if(e.key==='ArrowLeft') go(-1);
+  });
+
+  // 캡처 이미지를 클릭하면 크게 보여주고, 다시 클릭하거나 Esc를 누르면 닫음 (발표 중 작은 글자 확대용)
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightboxImg');
+  function closeLightbox() { lightbox.classList.remove('on'); }
+  document.querySelectorAll('img.shot').forEach(function (img) {
+    img.addEventListener('click', function () {
+      lightboxImg.src = img.src;
+      lightbox.classList.add('on');
+    });
+  });
+  lightbox.addEventListener('click', closeLightbox);
+  render();
+</script>
+</body>
+</html>

@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TempoTrace - 정확도 분석 결과</title>
+<!-- [이 파일의 구조] <style> = 모양(CSS) / <body> = 화면 뼈대 / <script> = 동작(자바스크립트). 파이썬(accuracy_test.py)이 분석 결과를 EMBEDDED_DATA 로 심어 주면, 이 페이지가 그 값으로 화면을 그린다 -->
+<style>
+  * { box-sizing: border-box; word-break: keep-all; overflow-wrap: break-word; }
+  body {
+    margin: 0;
+    font-family: '맑은 고딕', 'Malgun Gothic', Arial, sans-serif;
+    background: #eef1f5;
+    padding: 40px;
+  }
+  .card {
+    max-width: 960px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 8px;
+    padding: 32px 40px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  h1 { font-size: 24px; color: #1c1c1c; margin-top: 0; }
+  p.desc { color: #555; font-size: 15px; line-height: 1.6; }
+
+  .upload-box {
+    border: 2px dashed #2f5da8;
+    border-radius: 6px;
+    padding: 24px;
+    text-align: center;
+    margin: 20px 0;
+    color: #2f5da8;
+  }
+
+  .accuracy-hero {
+    text-align: center;
+    background: #f4f7fb;
+    border-radius: 8px;
+    padding: 28px;
+    margin: 20px 0;
+  }
+  .accuracy-hero .big { font-size: 56px; font-weight: bold; color: #2f5da8; }
+  .accuracy-hero .small { font-size: 14px; color: #666; margin-top: 6px; }
+  .accuracy-hero .meta { font-size: 12.5px; color: #888; margin-top: 10px; }
+
+  .stats { display: flex; gap: 16px; margin-top: 16px; }
+  .stat-box {
+    flex: 1;
+    background: #f4f7fb;
+    border-left: 4px solid #2f5da8;
+    padding: 14px 16px;
+  }
+  .stat-box .num { font-size: 22px; font-weight: bold; color: #2f5da8; }
+  .stat-box .label { font-size: 13px; color: #666; margin-top: 4px; }
+
+  /* ---------- 기준값 조정 영역 ---------- */
+  .slider-box {
+    background: #f4f7fb;
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin: 20px 0;
+  }
+  .slider-box .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .slider-box .row .val { font-family: monospace; font-weight: bold; color: #2f5da8; font-size: 18px; }
+  .slider-box input[type="range"] { width: 100%; accent-color: #2f5da8; }
+  .slider-box .hint { font-size: 12.5px; color: #888; margin-top: 10px; line-height: 1.6; }
+  .tol-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+  .tol-controls input[type="number"] {
+    width: 96px; padding: 7px 8px; font-size: 16px; text-align: right;
+    border: 1px solid #b9c3d4; border-radius: 4px; background: #fff;
+  }
+  .tol-controls span.unit { font-size: 14px; color: #555; }
+  .btn {
+    background: #2f5da8; color: #fff; border: none; border-radius: 4px;
+    padding: 8px 14px; font-size: 14px; cursor: pointer;
+  }
+  .btn.ghost { background: #fff; color: #2f5da8; border: 1px solid #2f5da8; margin-left: auto; }
+  .save-status { font-size: 12.5px; margin-top: 10px; color: #2f7a4b; line-height: 1.6; min-height: 1.6em; }
+  .save-status.warn { color: #b26a00; }
+
+  canvas {
+    width: 100%;
+    height: 160px;
+    background: #f7f9fc;
+    border: 1px solid #d3d9e2;
+    border-radius: 4px;
+    display: block;
+    margin-top: 16px;
+  }
+  .canvas-label { font-size: 13px; color: #555; margin-top: 20px; font-weight: bold; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 8px; font-size: 13px; color: #555; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 14px; height: 3px; display: inline-block; }
+  .swatch.box { height: 10px; width: 10px; border-radius: 2px; }
+
+  .section-title {
+    font-size: 17px; font-weight: bold; color: #1c1c1c;
+    margin: 36px 0 4px; padding-top: 22px; border-top: 1px solid #e3e8ef;
+  }
+  .section-desc { font-size: 13px; color: #777; margin: 0; line-height: 1.6; }
+  .summary-line {
+    font-size: 14px; color: #2b2b2b; background: #f4f7fb;
+    border-left: 4px solid #2f5da8; border-radius: 4px;
+    padding: 10px 14px; margin-top: 12px; line-height: 1.6;
+  }
+  .note { font-size: 12.5px; color: #888; margin-top: 8px; line-height: 1.6; }
+
+  .table-wrap { max-height: 280px; overflow: auto; margin-top: 14px; border: 1px solid #d3d9e2; border-radius: 4px; }
+  table.history { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.history th, table.history td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #e3e8ef; white-space: nowrap; }
+  table.history th { background: #2f5da8; color: #fff; position: sticky; top: 0; }
+  table.history tr.latest td { background: #eef4ff; font-weight: bold; }
+  table.history td.old-tol { color: #999; }
+
+  .notice {
+    background: #fff7e6; border-left: 4px solid #d6842f; border-radius: 4px;
+    padding: 10px 14px; margin: 20px 0 0; font-size: 14px; color: #5a3b00; line-height: 1.6; display: none; white-space: pre-line;
+  }
+  .curve-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+  .curve-actions .note { margin-top: 0; }
+
+  .tip {
+    position: fixed; display: none; z-index: 50; pointer-events: none;
+    background: #1c1c1c; color: #fff; font-size: 12px; line-height: 1.5;
+    padding: 7px 10px; border-radius: 4px; white-space: pre-line; max-width: 280px;
+  }
+
+  @media (max-width: 640px) {
+    body { padding: 10px; }
+    .card { padding: 18px 14px; }
+    h1 { font-size: 20px; }
+    .accuracy-hero { padding: 18px 12px; }
+    .accuracy-hero .big { font-size: 44px; }
+    .stats { flex-direction: column; gap: 10px; }
+    .slider-box { padding: 14px; }
+    .btn.ghost { margin-left: 0; }
+    .section-title { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>TempoTrace — 정확도 분석 결과</h1>
+  <p class="desc" id="introDesc">
+    accuracy_test.py 실행 후 생성된 <b>accuracy_result.json</b> 파일을 불러오면
+    원곡과 내 연주를 비교한 정확도와 타이밍 오차를 확인할 수 있습니다.
+  </p>
+
+  <!-- 파일 선택 칸. 파이썬이 만든 accuracy_report.html 에서는 숨겨지고, 이 파일을 직접 열었을 때만 보인다 -->
+  <div class="upload-box">
+    accuracy_result.json 파일을 선택하세요
+    <br>
+    <input type="file" id="fileInput" accept=".json">
+  </div>
+
+  <!-- 내 녹음이 원곡과 시작 시점이 크게 어긋나 있을 때, 터미널에서 --align 을 쓰라는 안내 -->
+  <div class="notice" id="alignNotice"></div>
+
+  <div class="accuracy-hero">
+    <div class="big" id="accuracyBig">-</div>
+    <div class="small" id="heroLabel">박자 정확도</div>
+    <div class="meta" id="fileMeta"></div>
+  </div>
+
+  <!-- [BPM 모드 전용] 입력한 BPM·눈금 단위·눈금 위치 요약과, 점수를 믿기 어려운 경우의 안내 -->
+  <div class="summary-line" id="bpmInfo" style="display:none;"></div>
+  <div class="notice" id="bpmNotice"></div>
+
+  <!-- 기준값(허용 오차) 조정: 바꾸는 즉시 이 페이지의 모든 결과가 다시 계산되고, 기본값으로 저장됨 -->
+  <div class="slider-box">
+    <div class="row">
+      <span>기준값(허용 오차) 조정</span>
+      <span class="val"><span id="toleranceVal">-</span>ms</span>
+    </div>
+    <input type="range" id="toleranceSlider" min="10" max="500" step="5" value="150">
+    <div class="tol-controls">
+      <button type="button" class="btn" id="tolMinus">− 5</button>
+      <input type="number" id="toleranceInput" min="10" max="1000" step="1" value="150" inputmode="numeric" aria-label="기준값(ms)">
+      <span class="unit">ms</span>
+      <button type="button" class="btn" id="tolPlus">+ 5</button>
+      <button type="button" class="btn ghost" id="tolReset">150ms로 되돌리기</button>
+    </div>
+    <div class="hint">값을 낮추면 더 엄격하게, 높이면 더 관대하게 채점합니다. 바꾸는 즉시 아래의 정확도, 시간대별 분포, 연습 기록 추이가 모두 새 기준으로 다시 계산되고, 바꾼 값은 기본값으로 저장됩니다. (슬라이더 10~500ms, 숫자 입력 10~1000ms)</div>
+    <div class="save-status" id="saveStatus"></div>
+  </div>
+
+  <!-- 요약 숫자 3개 (평균 오차 / 놓친 음 / 엉뚱하게 친 음). 자바스크립트의 updateStatsAndDraw 가 값을 채운다 -->
+  <div class="stats">
+    <div class="stat-box"><div class="num" id="avgErrorStat">-</div><div class="label" id="avgErrorLabel">평균 타이밍 오차 (ms)</div></div>
+    <div class="stat-box"><div class="num" id="missedStat">-</div><div class="label" id="missedLabel">놓친 음 개수</div></div>
+    <div class="stat-box"><div class="num" id="extraStat">-</div><div class="label" id="extraLabel">엉뚱하게 친 음 개수</div></div>
+  </div>
+
+  <!-- 파형 그림은 <canvas>(그림판)이고, 자바스크립트의 drawWave 가 그 위에 직접 그린다 -->
+  <div class="canvas-label" id="originalLabel">원곡 파형 + onset 위치</div>
+  <canvas id="originalCanvas"></canvas>
+
+  <div class="canvas-label" id="userLabel">내 연주 파형 + 비교 결과</div>
+  <div class="legend" id="waveLegendSong">
+    <span><span class="swatch" style="background:#2f9e5b;"></span> 맞은 음</span>
+    <span><span class="swatch" style="background:#d64545;"></span> 엉뚱하게 친 음</span>
+    <span><span class="swatch" style="background:#999; border-top:2px dashed #999;"></span> 놓친 지점(원곡 기준)</span>
+  </div>
+  <!-- [BPM 모드 전용] 파형 위의 색깔 표시 설명. 점선은 BPM 으로 만든 박자 눈금이다 -->
+  <div class="legend" id="waveLegendBpm" style="display:none;">
+    <span><span class="swatch" style="background:#2f9e5b;"></span> 기준값 안으로 친 음</span>
+    <span><span class="swatch" style="background:#d64545;"></span> 기준값을 벗어난 음</span>
+    <span><span class="swatch" style="background:#999; border-top:2px dashed #999;"></span> 박자 눈금</span>
+  </div>
+  <canvas id="userCanvas"></canvas>
+
+  <!-- ===== [BPM 모드 전용] 각 소리가 눈금에서 벗어난 정도 ===== -->
+  <div id="devSection" style="display:none;">
+    <div class="section-title">각 소리가 눈금에서 얼마나 벗어났나</div>
+    <p class="section-desc">친 소리 하나하나가 가장 가까운 박자 눈금에서 몇 ms 벗어났는지 보여줍니다. 0선에 가까울수록 박자에 정확히 붙은 것이고, 위쪽은 늦게, 아래쪽은 빨리 친 소리입니다. 초록색 띠가 지금의 기준값 범위입니다.</p>
+    <canvas id="devCanvas"></canvas>
+  </div>
+
+  <!-- ===== 시간대별 오류 분포 ===== -->
+  <div class="section-title">시간대별 오류 분포</div>
+  <p class="section-desc" id="segDesc">곡을 일정한 구간으로 나눠서, 어느 시간대에서 얼마나 틀렸는지 보여줍니다. 위의 기준값을 바꾸면 함께 바뀝니다.</p>
+  <div class="summary-line" id="segSummary">-</div>
+  <div class="legend">
+    <span id="segLegendMissed"><span class="swatch box" style="background:#9aa3b2;"></span> 놓친 음</span>
+    <span id="segLegendExtra"><span class="swatch box" style="background:#d64545;"></span> <span id="segExtraText">엉뚱하게 친 음</span></span>
+    <span><span class="swatch box" style="background:#bfe3cd;"></span> 오류 없음</span>
+  </div>
+  <canvas id="segCanvas"></canvas>
+
+  <!-- ===== 기준값별 정확도 곡선 (10주차) ===== -->
+  <div class="section-title">기준값별 정확도 곡선 (기본 기준값 정하기)</div>
+  <p class="section-desc" id="curveDesc">기준값을 10ms에서 500ms까지 바꿔 가며 정확도가 어떻게 달라지는지 보여줍니다. 이 곡선은 "원곡의 음이 내 연주에서 몇 ms 이내에 나왔는가"를 누적한 것이어서, 곡선이 거의 오르지 않는 구간부터는 기준값을 키워도 정확도가 더 오르지 않습니다.</p>
+  <div class="summary-line" id="curveSummary">-</div>
+  <div class="legend">
+    <span><span class="swatch" style="background:#2f5da8; height:3px;"></span> 이번 연주</span>
+    <span id="curveAvgLegend"><span class="swatch" style="background:#8a94a6; border-top:2px dashed #8a94a6; height:0;"></span> 연습 기록 평균</span>
+    <span><span class="swatch" style="background:#d6842f;"></span> 현재 기준값</span>
+    <span id="curveBaseLegend" style="display:none;"><span class="swatch" style="background:#d64545; height:3px;"></span> 우연히 맞을 확률</span>
+  </div>
+  <canvas id="curveCanvas"></canvas>
+  <div class="curve-actions">
+    <button type="button" class="btn" id="applyCandidate" style="display:none;">후보값 적용</button>
+    <span class="note" id="curveNote"></span>
+  </div>
+
+  <!-- ===== 반복 연습 기록 (결과 추이) ===== -->
+  <div id="historySection" style="display:none;">
+    <div class="section-title">반복 연습 기록 (결과 추이)</div>
+    <p class="section-desc" id="histDesc">실행할 때마다 기록이 계속 누적됩니다. 기록에는 원본 onset 시각이 함께 저장되어 있어서, 위의 기준값을 바꾸면 <b>모든 회차가 새 기준으로 다시 계산</b>됩니다.</p>
+    <div class="summary-line" id="trendSummary">-</div>
+    <div class="note" id="histMeta"></div>
+
+    <div class="canvas-label">회차별 정확도 변화</div>
+    <canvas id="trendCanvas"></canvas>
+
+    <div class="canvas-label">자주 틀리는 구간 (표시된 회차 평균)</div>
+    <div class="summary-line" id="freqSummary" style="display:none;">-</div>
+    <div class="note" id="freqNote" style="display:none;">연습 기록이 2회 이상 쌓이면 구간별 평균이 표시됩니다.</div>
+    <canvas id="freqCanvas" style="display:none;"></canvas>
+
+    <div class="canvas-label">연습 기록 표 (최근 순)</div>
+    <div class="table-wrap">
+      <table class="history">
+        <thead><tr><th>회차</th><th>일시</th><th>연주 파일</th><th>정확도</th><th>평균 오차</th><th id="thMissed">놓침</th><th id="thExtra">엉뚱</th><th>기록 당시 기준</th></tr></thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+    <div class="note">※ 정확도·평균 오차·놓침·엉뚱은 모두 현재 기준값으로 다시 계산한 값입니다. '기록 당시 기준'은 그 연습을 기록했을 때의 기준값입니다.</div>
+  </div>
+</div>
+
+<!-- 그래프 위에 마우스를 올리면 뜨는 말풍선. 내용은 자바스크립트의 bindTip 이 채운다 -->
+<div class="tip" id="tip"></div>
+
+<script>
+  // ============================================================
+  // [이 스크립트를 읽는 순서]
+  //   1. 기본 설정        기준값 범위, 저장 방식(서버 / 브라우저) 등 공통 값
+  //   2. 데이터 불러오기   파이썬이 심어 준 EMBEDDED_DATA, 또는 '파일 선택'으로 받은 JSON
+  //   3. 기준값 조작      슬라이더·숫자 입력·버튼이 모두 setTolerance() 하나로 모인다
+  //   4. 기본값 저장      서버(설정 파일) 또는 브라우저(localStorage)에 저장
+  //   5. 결과 그리기      renderResult → renderAll → 현재 결과 / 시간대별 분포 / 기준값 곡선 / 연습 기록
+  //   6. 계산 함수        compareOnsets(채점), computeSegments(구간 집계) — 파이썬과 같은 규칙
+  //   7. 그래프 함수      prepCanvas, drawWave, drawStackedBars, drawCurve, drawTrend (캔버스에 직접 그림)
+  //
+  // [핵심 아이디어]
+  //   화면 전체가 변수 tolMs(기준값) 하나를 기준으로 계산된다.
+  //   그래서 기준값이 바뀌면 setTolerance() → renderAll() 만 다시 부르면, 모든 숫자와 그래프가 함께 바뀐다.
+  // ============================================================
+  //
+  // $('이름') 처럼 짧게 쓰려고 만든 도우미. HTML 에서 id 가 '이름'인 요소를 가져온다
+  const $ = id => document.getElementById(id);
+
+  // ------------------------------------------------------------
+  // 기본 설정
+  // ------------------------------------------------------------
+  // SERVED : 이 페이지가 파이썬이 띄운 리포트 서버(http://127.0.0.1:포트)에서 열렸는지 여부.
+  //          서버에서 열렸으면 기준값을 바꿀 때 프로그램의 설정 파일(tempotrace_settings.json)까지 저장할 수 있다.
+  //          파일로 직접 열었으면(file://) 이 브라우저(localStorage)에만 저장한다.
+  const SERVED = location.protocol === 'http:' || location.protocol === 'https:';
+  const LS_KEY = 'tempotrace.tolerance';
+  const FACTORY_TOL = 150, MIN_TOL = 10, MAX_TOL = 1000, SLIDER_MAX = 500;
+  // BPM 모드는 눈금 간격이 좁아서 곡 모드(150ms)보다 훨씬 작은 기준값을 쓴다. 기본값 저장도 따로 한다
+  const LS_KEY_BPM = 'tempotrace.bpm_tolerance';
+  const BPM_FACTORY_TOL = 50;
+
+  let currentData = null;     // 불러온 분석 결과 전체
+  let tolMs = FACTORY_TOL;    // 지금 적용 중인 기준값(ms) — 이 값 하나가 화면 전체의 계산 기준
+  let settingsVersion = 0;    // 기본값 설정의 세대 번호 (프로그램 쪽 설정이 바뀌었는지 구분하는 용도)
+  // renderQueued: 화면 갱신이 이미 예약돼 있는지 / saveTimer: 저장 예약용 타이머 (아래 scheduleRender, scheduleSave 에서 사용)
+  let renderQueued = false;
+  let saveTimer = null;
+
+  // clampTol: 기준값을 10~1000 범위의 정수로 맞춘다 / validTol: 범위 안의 숫자인지 확인만 한다 (값을 바꾸지는 않는다)
+  function clampTol(v) { return Math.max(MIN_TOL, Math.min(MAX_TOL, Math.round(Number(v)))); }
+  function validTol(v) { return Number.isFinite(v) && v >= MIN_TOL && v <= MAX_TOL; }
+
+  // 지금 보고 있는 결과가 BPM 모드인지, 모드별 처음 기준값과 저장 이름은 무엇인지
+  function isBpm(d) { return !!d && d.mode === 'bpm'; }
+  function factoryTol() { return isBpm(currentData) ? BPM_FACTORY_TOL : FACTORY_TOL; }
+  function lsKey() { return isBpm(currentData) ? LS_KEY_BPM : LS_KEY; }
+  function durationOf(d) { return isBpm(d) ? d.user_duration : d.original_duration; }   // 곡 모드는 원곡 길이, BPM 모드는 내 녹음 길이
+
+  // ------------------------------------------------------------
+  // 데이터 불러오기: (1) 파일 선택  (2) accuracy_test.py가 HTML에 심어준 EMBEDDED_DATA
+  // ------------------------------------------------------------
+  $('fileInput').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (event) { renderResult(JSON.parse(event.target.result)); };
+    reader.readAsText(file);
+  });
+
+  window.addEventListener('DOMContentLoaded', function () {
+    if (typeof EMBEDDED_DATA === 'undefined') return;
+    document.querySelector('.upload-box').style.display = 'none';
+
+    if (!SERVED) { renderResult(EMBEDDED_DATA); return; }
+
+    // 서버 모드: 리포트 파일에 들어 있는 기본값은 "파일을 만들 당시의 값"이라서,
+    // 페이지를 열거나 새로고침할 때마다 서버에서 "지금 저장된 최신 기본값"을 받아와서 사용한다.
+    // (받아오지 못하면 파일에 들어 있는 값으로 대신 연다)
+    fetch('/api/settings', { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (s) {
+        // 곡 모드는 tolerance_ms, BPM 모드는 bpm_tolerance_ms 를 기본값으로 쓴다
+        const saved = EMBEDDED_DATA.mode === 'bpm' ? s.bpm_tolerance_ms : s.tolerance_ms;
+        renderResult(Object.assign({}, EMBEDDED_DATA, { tolerance_ms: saved || EMBEDDED_DATA.tolerance_ms, settings_version: s.version }));
+      })
+      .catch(function () { renderResult(EMBEDDED_DATA); });
+  });
+
+  // ------------------------------------------------------------
+  // 기준값 조작 (슬라이더 / 숫자 입력 / ±5 버튼 / 되돌리기)
+  // ------------------------------------------------------------
+  $('toleranceSlider').addEventListener('input', function (e) { setTolerance(Number(e.target.value), 'slider'); });
+
+  $('toleranceInput').addEventListener('input', function (e) {       // 숫자를 입력하는 도중에도 즉시 반영
+    const v = Number(e.target.value);
+    if (e.target.value !== '' && validTol(v)) setTolerance(v, 'input');
+  });
+  $('toleranceInput').addEventListener('change', function (e) {      // 입력을 마치면(포커스 이동) 범위를 벗어난 값은 보정
+    const v = Number(e.target.value);
+    setTolerance(Number.isFinite(v) && e.target.value !== '' ? v : tolMs, 'change');
+  });
+  $('toleranceInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') e.target.blur(); });
+
+  $('tolMinus').addEventListener('click', function () { setTolerance(tolMs - 5, 'btn'); });
+  $('tolPlus').addEventListener('click', function () { setTolerance(tolMs + 5, 'btn'); });
+  $('tolReset').addEventListener('click', function () { setTolerance(factoryTol(), 'btn'); });
+
+  // 기준값을 바꾼다: 화면의 컨트롤을 맞추고 → 전체 다시 계산(예약) → 기본값으로 저장(예약)
+  function setTolerance(ms, source) {
+    // ① 값을 범위 안으로 맞추고, 화면의 숫자·슬라이더·입력칸을 모두 같은 값으로 맞춘다
+    ms = clampTol(ms);
+    tolMs = ms;
+    $('toleranceVal').textContent = ms;
+    $('toleranceSlider').value = Math.min(ms, SLIDER_MAX);
+    if (source !== 'input') $('toleranceInput').value = ms;   // 입력 중일 때는 사용자가 치고 있는 글자를 건드리지 않음
+    // ② 분석 데이터가 불러와져 있으면: 화면 전체를 다시 계산(예약)하고, 기본값 저장도 예약한다
+    if (currentData) { scheduleRender(); scheduleSave(); }
+  }
+
+  // 슬라이더를 빠르게 끌면 이벤트가 매우 많이 발생하므로, 화면 갱신은 한 프레임에 한 번만 한다.
+  function scheduleRender() {
+    if (renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(function () { renderQueued = false; renderAll(); });
+  }
+
+  // 저장은 값이 멈춘 뒤 0.35초 후에 한 번만 한다. (끄는 동안 서버에 수십 번 요청하지 않도록)
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { persist(tolMs); }, 350);
+  }
+
+  // ------------------------------------------------------------
+  // 기본값 저장
+  //   서버 모드  : 서버(/api/settings)에 보내서 tempotrace_settings.json 에 저장 → 다음 실행의 기본값이 됨
+  //   파일 모드  : 이 브라우저의 localStorage 에 저장 → 다음에 이 리포트를 열 때 이 값으로 시작
+  // ------------------------------------------------------------
+  function lsRead() { try { return JSON.parse(localStorage.getItem(lsKey()) || 'null'); } catch (e) { return null; } }
+  function lsWrite(ms, version) {
+    try { localStorage.setItem(lsKey(), JSON.stringify({ ms: ms, version: version })); return true; } catch (e) { return false; }
+  }
+
+  function setStatus(text, warn) {
+    const el = $('saveStatus');
+    el.textContent = text;
+    el.className = 'save-status' + (warn ? ' warn' : '');
+  }
+
+  function persist(ms) {
+    // 어느 모드든 이 브라우저(localStorage)에는 먼저 저장해 둔다
+    const savedLocal = lsWrite(ms, settingsVersion);
+    // 프로그램의 기본값을 터미널에서 바꾸는 명령 (BPM 모드는 --bpm 이 같이 필요하다)
+    const cmd = isBpm(currentData) ? 'python accuracy_test.py --bpm=' + currentData.bpm + ' --tolerance=' + ms : 'python accuracy_test.py --tolerance=' + ms;
+    if (!SERVED) {
+      setStatus(savedLocal
+        ? '✔ ' + ms + 'ms를 이 브라우저의 기본값으로 저장했습니다. 프로그램의 기본값까지 바꾸려면 터미널에서 ' + cmd
+        : '이 브라우저에는 저장할 수 없습니다. 프로그램의 기본값을 바꾸려면 터미널에서 ' + cmd, !savedLocal);
+      return;
+    }
+    // 서버 모드: 파이썬 서버에 값을 보낸다(POST). fetch 는 서버에 요청을 보내는 자바스크립트 기본 기능이고,
+    // .then(...) 은 '성공하면 이어서 할 일', .catch(...) 는 '실패하면 할 일'이다
+    fetch('/api/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(isBpm(currentData) ? { bpm_tolerance_ms: ms } : { tolerance_ms: ms })
+    }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function (j) {
+      settingsVersion = j.version;
+      lsWrite(ms, settingsVersion);
+      if (ms === tolMs) setStatus('✔ 기본값을 ' + (isBpm(currentData) ? j.bpm_tolerance_ms : j.tolerance_ms) + 'ms로 저장했습니다. 다음 실행부터 이 값이 기본 기준으로 쓰입니다.');
+    }).catch(function () {
+      setStatus('프로그램에 저장하지 못했습니다. (터미널의 서버가 종료되었을 수 있습니다) 이 브라우저에만 저장했습니다.', true);
+    });
+  }
+
+  // 처음 열 때 쓸 기준값: 서버 모드는 프로그램의 기본값, 파일 모드는 이 브라우저에 저장해 둔 값(있고 최신이면)
+  function initialTolerance(data) {
+    const base = clampTol(data.tolerance_ms || factoryTol());
+    if (SERVED) return { ms: base, fromBrowser: false };
+    const rec = lsRead();
+    // 프로그램의 설정 세대(version)가 같을 때만 브라우저에 저장된 값을 인정한다.
+    // (그 사이에 --tolerance 로 기본값을 바꿨다면 프로그램 쪽 값이 우선)
+    if (rec && rec.version === (data.settings_version || 0) && validTol(rec.ms)) return { ms: rec.ms, fromBrowser: true };
+    return { ms: base, fromBrowser: false };
+  }
+
+  // ------------------------------------------------------------
+  // 결과 렌더링
+  // ------------------------------------------------------------
+  function renderResult(data) {
+    currentData = data;
+    curveCache = null;                  // 새 데이터를 불러왔으니 곡선은 다시 계산
+    settingsVersion = data.settings_version || 0;
+
+    // 처음 열 때 쓸 기준값을 정하고, 화면의 숫자·슬라이더·입력칸에 반영한다
+    const init = initialTolerance(data);
+    tolMs = init.ms;
+    $('toleranceVal').textContent = tolMs;
+    $('toleranceSlider').value = Math.min(tolMs, SLIDER_MAX);
+    $('toleranceInput').value = tolMs;
+    $('tolReset').textContent = factoryTol() + 'ms로 되돌리기';
+
+    if (SERVED) setStatus('기본값 ' + tolMs + 'ms (프로그램 설정에서 불러옴). 값을 바꾸면 자동으로 기본값으로 저장됩니다.');
+    else if (init.fromBrowser) setStatus('이 브라우저에 저장해 둔 기본값 ' + tolMs + 'ms로 시작했습니다.');
+    else setStatus('기본값 ' + tolMs + 'ms로 시작했습니다. 값을 바꾸면 이 브라우저에 기본값으로 저장됩니다.');
+
+    // 화면 전체를 이 기준값으로 그린다
+    renderAll();
+  }
+
+  // 현재 기준값(tolMs)으로 화면 전체(현재 결과 + 시간대별 분포 + 연습 기록)를 다시 계산해서 그린다.
+  function renderAll() {
+    if (!currentData) return;
+    const d = currentData;
+    if (isBpm(d)) { renderAllBpm(d); return; }      // BPM 모드는 아래 'BPM 모드' 구역의 함수로 그린다
+    applyModeLayout(false, d);                       // 곡 모드: 화면 요소를 곡 모드 상태로 되돌린다
+    const r = compareOnsets(d.original_onsets, getUserOnsets(d), tolMs / 1000);
+
+    const parts = [];
+    if (d.take_name) parts.push('연주 파일: ' + d.take_name);
+    if (d.original_name) parts.push('원곡: ' + d.original_name);
+    parts.push('기준 ' + tolMs + 'ms');
+    if (d.offset_ms) {                                   // 시작 시점 보정이 적용된 경우 표시
+      parts.push('시작 보정 ' + (d.offset_ms > 0 ? '+' : '') + (d.offset_ms / 1000).toFixed(3) + '초(' + (d.align_mode === 'auto' ? '자동' : '직접 지정') + ')');
+    }
+    $('fileMeta').textContent = parts.join('  ·  ');
+
+    // 시작 시점이 크게 어긋나 보이는데 보정을 안 한 경우 안내
+    const notice = $('alignNotice');
+    if (d.align_hint_ms) {
+      const sec = Math.abs(d.align_hint_ms / 1000).toFixed(2);
+      notice.textContent = '내 녹음이 원곡보다 약 ' + sec + '초 ' + (d.align_hint_ms > 0 ? '일찍' : '늦게') + ' 시작한 것 같습니다. 터미널에서 --align 을 붙여 다시 실행하면 시작 시점을 맞춰서 비교합니다.';
+      notice.style.display = 'block';
+    } else {
+      notice.style.display = 'none';
+    }
+
+    updateStatsAndDraw(d, r.matches, r.missed, r.extra);
+    drawCurveSection(d);
+    renderHistory(d);
+  }
+
+  // 창 크기가 바뀌면(모바일 회전 등) 그래프를 새 너비에 맞게 다시 그림
+  let resizeTimer = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderAll, 120);
+  });
+
+  // 내 연주 onset 목록 (예전 JSON에는 user_onsets가 없어서, 있는 정보로 복원)
+  function getUserOnsets(data) {
+    if (data.user_onsets) return data.user_onsets;
+    return data.matched.map(m => m.user).concat(data.extra).sort((a, b) => a - b);
+  }
+
+  // ------------------------------------------------------------
+  // 파이썬 accuracy_test.py의 compare_onsets()를 자바스크립트로 그대로 옮긴 것.
+  // (로직이 다르면 파이썬 결과와 어긋나므로 반드시 같게 유지)
+  // ------------------------------------------------------------
+  function compareOnsets(originalTimes, userTimes, tolerance) {
+    const matches = [];
+    const missed = [];
+    // 이미 어떤 원곡 음과 짝지어진 '내 연주 음'의 번호. (Set = 중복 없는 집합). 파이썬 compare_onsets 와 같은 규칙이다
+    const usedUserIndices = new Set();
+
+    // 원곡의 음을 하나씩 채점한다: 가장 가까운 내 음을 찾고, 기준값 이내이며 아직 안 쓰인 음이면 '맞음'
+    originalTimes.forEach(function (ot) {
+      if (userTimes.length === 0) { missed.push(ot); return; }
+      let bestIdx = -1, bestDiff = Infinity;
+      userTimes.forEach(function (ut, i) {
+        const diff = Math.abs(ut - ot);
+        if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+      });
+      if (bestDiff <= tolerance && !usedUserIndices.has(bestIdx)) {
+        matches.push({ original: ot, user: userTimes[bestIdx], error: bestDiff });
+        usedUserIndices.add(bestIdx);
+      } else {
+        missed.push(ot);
+      }
+    });
+
+    const extra = userTimes.filter(function (t, i) { return !usedUserIndices.has(i); });
+    return { matches, missed, extra };
+  }
+
+  // ------------------------------------------------------------
+  // 시간대별 집계 — 파이썬 compute_segments()와 같은 규칙
+  // ------------------------------------------------------------
+  function segmentCount(duration, segLen) {
+    let n = Math.max(1, Math.ceil(Math.round(duration / segLen * 1000) / 1000));
+    if (n > 1 && (duration - (n - 1) * segLen) < 0.25 * segLen) n -= 1;   // 끝의 짧은 조각은 마지막 구간에 합침
+    return n;
+  }
+
+  function computeSegments(originalOnsets, missed, extra, duration, segLen) {
+    const n = segmentCount(duration, segLen);
+    const segs = [];
+    for (let i = 0; i < n; i++) {
+      segs.push({ start: i * segLen, end: Math.min((i + 1) * segLen, duration), total: 0, missed: 0, extra: 0 });
+    }
+    const idx = t => Math.min(n - 1, Math.max(0, Math.floor(t / segLen)));
+    originalOnsets.forEach(t => { segs[idx(t)].total++; });
+    missed.forEach(t => { segs[idx(t)].missed++; });
+    extra.forEach(t => { segs[idx(t)].extra++; });
+    return segs;
+  }
+
+  function fmtT(t, clock) {
+    if (!clock) return String(Math.round(t * 10) / 10);
+    return Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+  }
+  function segLabel(s, clock) {
+    return clock ? fmtT(s.start, true) : fmtT(s.start, false) + '~' + fmtT(s.end, false) + '초';
+  }
+  function segRangeText(s, clock) {
+    return clock ? fmtT(s.start, true) + '~' + fmtT(s.end, true) : fmtT(s.start) + '~' + fmtT(s.end) + '초';
+  }
+
+  // ------------------------------------------------------------
+  // 현재 연주의 정확도/통계/그래프
+  // ------------------------------------------------------------
+  function updateStatsAndDraw(data, matches, missed, extra) {
+    const accuracy = data.original_onsets.length > 0
+      ? (matches.length / data.original_onsets.length * 100) : 0;
+    const avgErrorMs = matches.length > 0
+      ? (matches.reduce((sum, m) => sum + m.error, 0) / matches.length * 1000) : 0;
+
+    $('accuracyBig').textContent = accuracy.toFixed(1) + '%';
+    $('avgErrorStat').textContent = avgErrorMs.toFixed(1);
+    $('missedStat').textContent = missed.length;
+    $('extraStat').textContent = extra.length;
+
+    drawWave('originalCanvas', data.original_waveform, data.original_duration, [
+      { times: data.original_onsets, color: '#2f5da8' }
+    ]);
+    drawWave('userCanvas', data.user_waveform, data.user_duration, [
+      { times: matches.map(m => m.user), color: '#2f9e5b' },
+      { times: extra, color: '#d64545' }
+    ], missed, data.original_duration);
+
+    drawSegmentSection(data, missed, extra);
+  }
+
+  // 고해상도(레티나/모바일) 화면에서도 선명하게 그리기 위한 캔버스 준비 공통 함수
+  function prepCanvas(id, cssHeight) {
+    const c = $(id);
+    // dpr: 화면 한 칸에 실제 픽셀이 몇 개 들어가는지. 고해상도 화면은 2 이상이라, 그만큼 캔버스를 크게 만들어야 글자와 선이 선명하다
+    const dpr = window.devicePixelRatio || 1;
+    const w = c.clientWidth;
+    c.style.height = cssHeight + 'px';
+    c.width = Math.round(w * dpr);
+    c.height = Math.round(cssHeight * dpr);
+    const ctx = c.getContext('2d');
+    // 이후 좌표는 '화면 크기 기준'으로 그리면 되도록 확대 비율을 맞춰 둔다
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, cssHeight);
+    return { c: c, ctx: ctx, w: w, h: cssHeight };
+  }
+
+  function drawWave(canvasId, waveform, duration, markerGroups, missedTimes, missedDuration) {
+    const p = prepCanvas(canvasId, 160);
+    // mid: 세로 중앙선(소리가 0인 위치). 파형은 이 선을 기준으로 위아래로 그린다
+    const ctx = p.ctx, w = p.w, h = p.h, mid = h / 2;
+
+    ctx.beginPath();
+    ctx.strokeStyle = '#8fa3c2';
+    ctx.lineWidth = 1;
+    // 파형 값(v, -1~1)을 화면 좌표로 바꿔서 이어 그린다. x = 순서대로 가로 위치, y = 중앙선에서 위아래로 떨어진 정도
+    waveform.forEach(function (v, i) {
+      const x = (i / waveform.length) * w;
+      const y = mid - v * mid * 0.9;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // 색깔별 onset 표시선: 맞은 음(초록), 엉뚱하게 친 음(빨강) 등을 세로선으로 그린다. x = 시각 ÷ 곡 길이 × 그래프 너비
+    markerGroups.forEach(function (group) {
+      ctx.strokeStyle = group.color;
+      ctx.lineWidth = 2;
+      group.times.forEach(function (t) {
+        const x = (t / duration) * w;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      });
+    });
+
+    // 놓친 음은 원곡 기준 위치에 회색 점선으로 표시한다
+    if (missedTimes) {
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      missedTimes.forEach(function (t) {
+        const x = (t / missedDuration) * w;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      });
+      ctx.setLineDash([]);
+    }
+  }
+
+  // ------------------------------------------------------------
+  // 시간대별 오류 분포 (현재 연주)
+  // ------------------------------------------------------------
+  function drawSegmentSection(data, missed, extra) {
+    const segLen = data.segment_seconds || 2;
+    const segs = computeSegments(data.original_onsets, missed, extra, data.original_duration, segLen);
+    const clock = data.original_duration >= 60;
+
+    const items = segs.map(function (s) {
+      return {
+        label: segLabel(s, clock), missed: s.missed, extra: s.extra,
+        tip: segRangeText(s, clock) + '\n원곡 음 ' + s.total + '개\n놓침 ' + s.missed + ' · 엉뚱 ' + s.extra
+      };
+    });
+    drawStackedBars('segCanvas', items, { height: 210, minMax: 2 });
+
+    const totalErr = segs.reduce((a, s) => a + s.missed + s.extra, 0);
+    const maxErr = Math.max.apply(null, segs.map(s => s.missed + s.extra));
+    if (totalErr === 0) {
+      $('segSummary').textContent = '모든 구간에서 오류가 없습니다. (기준 ' + tolMs + 'ms)';
+    } else {
+      const worst = segs.filter(s => s.missed + s.extra === maxErr);
+      const shown = worst.slice(0, 3).map(s => segRangeText(s, clock)).join(', ');
+      const more = worst.length > 3 ? ' 외 ' + (worst.length - 3) + '곳' : '';
+      $('segSummary').textContent = '가장 많이 틀린 구간: ' + shown + more + ' (구간당 오류 ' + maxErr + '개) · 전체 ' + segs.length + '개 구간 중 오류가 있는 구간 ' + segs.filter(s => s.missed + s.extra > 0).length + '개';
+    }
+  }
+
+  // 막대그래프(놓침=회색, 엉뚱=빨강을 쌓음). 마우스를 올리면 구간 상세가 말풍선으로 표시됨.
+  function drawStackedBars(canvasId, items, o) {
+    const p = prepCanvas(canvasId, o.height || 200);
+    const ctx = p.ctx, w = p.w, h = p.h;
+    // 그래프 주변 여백(왼쪽·오른쪽·위·아래). 왼쪽에는 숫자, 아래에는 구간 이름이 들어갈 자리가 필요하다
+    const padL = 34, padR = 10, padT = 14, padB = 34;
+    const plotW = w - padL - padR, plotH = h - padT - padB;
+
+    // 가장 높은 막대(놓침 + 엉뚱)의 값으로 세로축의 최댓값을 정한다
+    const maxTotal = Math.max.apply(null, [0].concat(items.map(it => it.missed + it.extra)));
+    const yMax = Math.max(o.minMax || 1, Math.ceil(maxTotal));
+    const step = yMax <= 5 ? 1 : Math.ceil(yMax / 5);
+
+    ctx.font = '11px "Malgun Gothic", Arial, sans-serif';
+    ctx.lineWidth = 1;
+    // 가로 눈금선과 왼쪽 숫자를 그린다
+    for (let v = 0; v <= yMax; v += step) {
+      const y = padT + plotH - (v / yMax) * plotH;
+      ctx.strokeStyle = '#e3e8ef';
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+      ctx.fillStyle = '#888'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(v), padL - 6, y);
+    }
+
+    // slot: 막대 하나가 차지하는 가로 칸 / barW: 막대의 실제 너비 / labelStep: 글자가 겹치지 않게 몇 칸마다 이름을 쓸지
+    const slot = plotW / items.length;
+    const barW = Math.max(3, Math.min(48, slot * 0.62));
+    const labelStep = Math.max(1, Math.ceil(items.length / Math.max(1, Math.floor(plotW / 52))));
+    const bars = [];
+
+    // 구간마다 막대를 그린다. 아래는 놓침(회색), 그 위에 엉뚱(빨강). 오류가 없는 구간은 연한 초록 띠만 그린다
+    items.forEach(function (it, i) {
+      const cx = padL + slot * (i + 0.5);
+      const x0 = cx - barW / 2;
+      let yBase = padT + plotH;
+      const hm = (it.missed / yMax) * plotH;
+      const he = (it.extra / yMax) * plotH;
+      if (hm > 0) { ctx.fillStyle = '#9aa3b2'; ctx.fillRect(x0, yBase - hm, barW, hm); yBase -= hm; }
+      if (he > 0) { ctx.fillStyle = '#d64545'; ctx.fillRect(x0, yBase - he, barW, he); }
+      if (it.missed + it.extra === 0) { ctx.fillStyle = '#bfe3cd'; ctx.fillRect(x0, padT + plotH - 4, barW, 4); }
+      if (i % labelStep === 0) {
+        ctx.fillStyle = '#555'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.fillText(it.label, cx, padT + plotH + 8);
+      }
+      bars.push({ x0: padL + slot * i, x1: padL + slot * (i + 1), text: it.tip });
+    });
+
+    bindTip(p.c, bars);
+  }
+
+  // 마우스(또는 터치)를 올린 위치의 정보를 말풍선으로 보여주는 공통 함수
+  function bindTip(c, bars) {
+    c._bars = bars;
+    if (c._tipBound) return;
+    c._tipBound = true;
+    const tip = $('tip');
+    function show(e) {
+      const r = c.getBoundingClientRect();
+      const x = e.clientX - r.left;
+      const b = (c._bars || []).find(b => x >= b.x0 && x < b.x1);
+      if (!b) { tip.style.display = 'none'; return; }
+      tip.textContent = b.text;
+      tip.style.display = 'block';
+      let left = e.clientX + 12;
+      if (left + tip.offsetWidth > window.innerWidth - 8) left = e.clientX - tip.offsetWidth - 12;
+      tip.style.left = Math.max(4, left) + 'px';
+      tip.style.top = (e.clientY + 14) + 'px';
+    }
+    c.addEventListener('mousemove', show);
+    c.addEventListener('click', show);
+    // 터치 직후 브라우저가 만들어내는 'mouseleave' 때문에 말풍선이 바로 닫히지 않도록 0.8초간 무시
+    c.addEventListener('touchstart', function () { c._lastTouch = Date.now(); }, { passive: true });
+    c.addEventListener('mouseleave', function () {
+      if (c._lastTouch && Date.now() - c._lastTouch < 800) return;
+      tip.style.display = 'none';
+    });
+  }
+  document.addEventListener('click', function (e) {
+    if (e.target.tagName !== 'CANVAS') $('tip').style.display = 'none';
+  });
+
+  // ------------------------------------------------------------
+  // 기준값별 정확도 곡선 (10주차)
+  //   기준값을 10~500ms 로 바꿔 가며 정확도를 구한다. 매번 compareOnsets 를 돌리면 느리므로,
+  //   "원곡의 각 음에서 가장 가까운 내 연주 음"은 기준값과 상관없이 같다는 점을 이용해서 한 번만 구해 두고,
+  //   기준값마다 그 결과를 순서대로 훑으며 채점한다. (결과는 compareOnsets 와 완전히 같다)
+  // ------------------------------------------------------------
+  const CURVE_MS = [];
+  for (let ms = 10; ms <= 500; ms += 5) CURVE_MS.push(ms);
+  let curveCache = null;
+
+  // 원곡의 각 음마다 가장 가까운 내 연주 음의 번호와 시간차를 구한다. (compareOnsets 와 같은 규칙: 같으면 앞의 것)
+  function nearestTable(orig, user) {
+    const idx = new Int32Array(orig.length).fill(-1);
+    const diff = new Float64Array(orig.length).fill(Infinity);
+    for (let i = 0; i < orig.length; i++) {
+      for (let j = 0; j < user.length; j++) {
+        const d = Math.abs(user[j] - orig[i]);
+        if (d < diff[i]) { diff[i] = d; idx[i] = j; }
+      }
+    }
+    return { idx: idx, diff: diff };
+  }
+
+  // 기준값(초)이 주어졌을 때의 정확도(%). 이미 다른 음에 쓰인 내 연주 음은 다시 쓰지 않는다.
+  function accuracyFromNearest(near, tolSec) {
+    const n = near.idx.length;
+    if (n === 0) return 0;
+    const used = new Set();
+    let matched = 0;
+    for (let i = 0; i < n; i++) {
+      if (near.diff[i] <= tolSec && !used.has(near.idx[i])) { matched++; used.add(near.idx[i]); }
+    }
+    return matched / n * 100;
+  }
+
+  // 현재 연주와, (있다면) 연습 기록 평균의 곡선을 계산한다. 데이터가 바뀌기 전까지는 한 번만 계산.
+  function getCurves(data) {
+    if (curveCache && curveCache.data === data) return curveCache;
+    const cur = nearestTable(data.original_onsets, getUserOnsets(data));
+    const curve = CURVE_MS.map(ms => accuracyFromNearest(cur, ms / 1000));
+
+    const hist = (data.history || []).filter(h => Array.isArray(h.original_onsets) && Array.isArray(h.user_onsets));
+    let avg = null;
+    if (hist.length >= 2) {
+      const tables = hist.map(h => nearestTable(h.original_onsets, h.user_onsets));
+      avg = CURVE_MS.map(ms => tables.reduce((a, t) => a + accuracyFromNearest(t, ms / 1000), 0) / tables.length);
+    }
+    curveCache = { data: data, curve: curve, avg: avg, histCount: hist.length };
+    return curveCache;
+  }
+
+  // 곡선에서 처음으로 목표 정확도에 도달하는 기준값(ms). 끝까지 못 미치면 null
+  function firstReach(curve, target) {
+    for (let i = 0; i < curve.length; i++) if (curve[i] >= target) return CURVE_MS[i];
+    return null;
+  }
+
+  function drawCurveSection(data) {
+    const cc = getCurves(data);
+    const base = cc.avg || cc.curve;                       // 후보값은 기록 평균이 있으면 그것으로(더 안정적), 없으면 이번 연주로
+
+    // 원곡 음 간격의 중앙값: 기준값이 이 간격의 절반을 넘으면 이웃한 음과 짝지어져서 정확도가 부풀려진다.
+    // 그래서 이 절반을 "기준값의 한도"로 보고, 한도 안에서만 후보값을 찾는다.
+    const o = data.original_onsets.slice().sort((a, b) => a - b);
+    const gaps = [];
+    for (let i = 1; i < o.length; i++) gaps.push((o[i] - o[i - 1]) * 1000);
+    gaps.sort((a, b) => a - b);
+    const medianGap = gaps.length ? gaps[Math.floor(gaps.length / 2)] : null;
+    const limit = medianGap ? Math.max(CURVE_MS[0], Math.min(500, Math.floor(medianGap / 2))) : 500;
+    const capIdx = Math.max(0, Math.min(CURVE_MS.length - 1, Math.floor((limit - CURVE_MS[0]) / 5)));
+    const maxAcc = base[capIdx];                           // 한도에서의 정확도 = 이 연주들이 도달할 수 있는 최대치
+    const candidate = firstReach(base.slice(0, capIdx + 1), maxAcc * 0.95);   // 최대치의 95%에 처음 도달하는 기준값
+
+    const cur80 = firstReach(cc.curve.slice(0, capIdx + 1), 80), cur90 = firstReach(cc.curve.slice(0, capIdx + 1), 90);
+    const reach = (v) => v === null ? limit + 'ms 한도 안에서는 도달하지 못함' : v + 'ms';
+    $('curveSummary').textContent = '이번 연주: 정확도 80%에 도달하는 기준값 ' + reach(cur80) + ', 90%는 ' + reach(cur90)
+      + ' · 기준값 한도(' + limit + 'ms)에서의 정확도 ' + cc.curve[capIdx].toFixed(1) + '%';
+
+    const btn = $('applyCandidate'), note = $('curveNote');
+    if (candidate !== null && maxAcc > 0) {
+      btn.style.display = 'inline-block';
+      btn.textContent = '후보값 ' + candidate + 'ms 적용';
+      btn.onclick = function () { setTolerance(candidate, 'btn'); };
+      let t = '후보값 = ' + (cc.avg ? '연습 기록 ' + cc.histCount + '회 평균' : '이번 연주') + '의 정확도가 한도(' + limit + 'ms)에서의 최대치(' + maxAcc.toFixed(1) + '%)의 95%에 처음 도달하는 기준값입니다.';
+      if (medianGap) t += ' 한도는 원곡 음 간격의 중앙값(' + Math.round(medianGap) + 'ms)의 절반입니다. 기준값이 이보다 크면 이웃한 음과 구분하기 어려워집니다.';
+      note.textContent = t;
+    } else {
+      btn.style.display = 'none';
+      note.textContent = '정확도가 0%에 가까워서 후보값을 정할 수 없습니다. 시작 시점이 어긋나 있는지 확인해 보세요. (--align)';
+    }
+    $('curveAvgLegend').style.display = cc.avg ? 'inline-flex' : 'none';
+
+    drawCurve('curveCanvas', cc);
+  }
+
+  // 곡선 그래프: 가로 = 기준값(ms), 세로 = 정확도(%). 현재 기준값에 세로선을 표시한다.
+  function drawCurve(canvasId, cc) {
+    const p = prepCanvas(canvasId, 230);
+    const ctx = p.ctx, w = p.w, h = p.h;
+    const padL = 40, padR = 14, padT = 16, padB = 34;
+    const plotW = w - padL - padR, plotH = h - padT - padB;
+    const X_MAX = 500;
+    const xOf = ms => padL + (Math.min(ms, X_MAX) / X_MAX) * plotW;
+    const yOf = v => padT + plotH - (Math.max(0, Math.min(100, v)) / 100) * plotH;
+
+    ctx.font = '11px "Malgun Gothic", Arial, sans-serif';
+    ctx.lineWidth = 1;
+    [0, 25, 50, 75, 100].forEach(function (v) {
+      ctx.strokeStyle = '#e3e8ef';
+      ctx.beginPath(); ctx.moveTo(padL, yOf(v)); ctx.lineTo(w - padR, yOf(v)); ctx.stroke();
+      ctx.fillStyle = '#888'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(v + '%', padL - 6, yOf(v));
+    });
+    [0, 100, 200, 300, 400, 500].forEach(function (ms) {
+      ctx.fillStyle = '#555'; ctx.textBaseline = 'top';
+      ctx.textAlign = ms === 500 ? 'right' : 'center';      // 맨 오른쪽 글자가 잘리지 않게 오른쪽 정렬
+      ctx.fillText(ms + 'ms', ms === 500 ? xOf(ms) + 8 : xOf(ms), padT + plotH + 8);
+    });
+
+    function line(values, color, dash, width) {
+      ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash);
+      ctx.beginPath();
+      values.forEach(function (v, i) { if (i === 0) ctx.moveTo(xOf(CURVE_MS[i]), yOf(v)); else ctx.lineTo(xOf(CURVE_MS[i]), yOf(v)); });
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+    if (cc.avg) line(cc.avg, '#8a94a6', [5, 4], 2);
+    if (cc.base) line(cc.base, '#d64545', [2, 3], 1.5);       // BPM 모드: 우연히 맞을 확률(기준선)
+    line(cc.curve, '#2f5da8', [], 2.5);
+
+    const mx = xOf(tolMs);                                   // 현재 기준값 표시선
+    ctx.strokeStyle = '#d6842f'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(mx, padT); ctx.lineTo(mx, padT + plotH); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#d6842f'; ctx.textBaseline = 'top';
+    ctx.textAlign = mx > w - 90 ? 'right' : 'left';
+    ctx.fillText('현재 ' + tolMs + 'ms', mx + (mx > w - 90 ? -4 : 4), padT + 2);
+
+    const bars = CURVE_MS.map(function (ms, i) {
+      const slot = plotW / CURVE_MS.length;
+      return {
+        x0: xOf(ms) - slot / 2, x1: xOf(ms) + slot / 2,
+        text: ms + 'ms\n이번 연주 ' + cc.curve[i].toFixed(1) + '%' + (cc.avg ? '\n연습 기록 평균 ' + cc.avg[i].toFixed(1) + '%' : '') + (cc.base ? '\n우연히 맞을 확률 ' + cc.base[i].toFixed(0) + '%' : '')
+      };
+    });
+    bindTip(p.c, bars);
+  }
+
+  // ------------------------------------------------------------
+  // BPM 모드 (11주차) — 원곡 대신 BPM 으로 만든 박자 눈금과 비교한 결과
+  //   data.mode === 'bpm' 일 때만 쓰인다. 곡 모드 코드는 건드리지 않는다.
+  //   파이썬 analyze_take_bpm() 과 같은 규칙: 각 소리가 가장 가까운 눈금에서 벗어난 정도(dev)가 기준값 이내면 '맞음'
+  //   정확도 = 기준값 이내로 친 소리의 비율 (놓친 음은 알 수 없으므로 없음)
+  // ------------------------------------------------------------
+  const DIV_NAMES = { 1: '4분음표', 2: '8분음표', 4: '16분음표' };
+
+  // 각 소리가 가장 가까운 눈금에서 몇 초 벗어났는지 (양수 = 늦게 침). 파이썬 grid_deviations 와 같은 식
+  function bpmDevs(userOnsets, bpm, div, phase) {
+    const period = 60 / bpm / div;
+    return userOnsets.map(function (t) {
+      const k = Math.floor((t - phase) / period + 0.5);      // 가장 가까운 눈금 번호 (파이썬과 같은 반올림 규칙)
+      return t - (phase + k * period);
+    });
+  }
+
+  // 아무렇게나 쳐도 우연히 기준 안에 들어올 확률(%). 기준값이 눈금 간격의 절반 이상이면 100% 가 된다
+  function bpmChance(tolMsValue, bpm, div) { return Math.min(100, 2 * tolMsValue / (60 / bpm / div * 1000) * 100); }
+
+  // BPM 모드 기록 한 건을 주어진 기준(초)으로 다시 채점한다. (곡 모드의 evaluateEntry 에 해당)
+  function evaluateEntryBpm(h, tolSec) {
+    const devs = bpmDevs(h.user_onsets, h.bpm, h.div, h.grid_phase);
+    const out = [];
+    let within = 0, sumAbs = 0;
+    devs.forEach(function (x, i) {
+      sumAbs += Math.abs(x);
+      if (Math.abs(x) <= tolSec) within++; else out.push(h.user_onsets[i]);
+    });
+    const n = devs.length;
+    return {
+      acc: n > 0 ? within / n * 100 : 0,
+      avg: n > 0 ? sumAbs / n * 1000 : 0,
+      total: n, missed: 0, extra: out.length,
+      segs: computeSegments(h.user_onsets, [], out, h.user_duration, h.segment_seconds)
+    };
+  }
+
+  // 화면의 글자와 요소를 모드에 맞게 바꾼다. (곡 모드로 돌아올 때는 처음 글자로 되돌린다)
+  function applyModeLayout(bpm, d) {
+    const show = function (id, on) { $(id).style.display = on ? '' : 'none'; };
+    const swap = function (id, bpmHtml) {                       // 처음 내용을 기억해 두고, BPM 모드일 때만 다른 내용으로
+      const e = $(id);
+      if (e.dataset.orig === undefined) e.dataset.orig = e.innerHTML;
+      e.innerHTML = bpm ? bpmHtml : e.dataset.orig;
+    };
+    show('originalLabel', !bpm); show('originalCanvas', !bpm);
+    show('waveLegendSong', !bpm); show('waveLegendBpm', bpm);
+    show('devSection', bpm); show('bpmInfo', bpm);
+    show('segLegendMissed', !bpm); show('curveBaseLegend', bpm);
+    if (bpm) { $('alignNotice').style.display = 'none'; $('curveAvgLegend').style.display = 'none'; }
+    else { $('bpmNotice').style.display = 'none'; }
+
+    swap('introDesc', 'accuracy_test.py 실행 후 생성된 <b>accuracy_result.json</b> 파일을 불러오면 BPM 으로 만든 박자 눈금과 내 연주를 비교한 정확도와 타이밍 오차를 확인할 수 있습니다.');
+    swap('heroLabel', '박자 정확도 (BPM 눈금 기준)');
+    swap('avgErrorLabel', '눈금과의 평균 거리 (ms)');
+    swap('missedLabel', '친 음 전체 개수');
+    swap('extraLabel', '기준값을 벗어난 음 개수');
+    swap('userLabel', '내 연주 파형 + 박자 눈금');
+    swap('segDesc', '녹음을 일정한 구간으로 나눠서, 어느 시간대에서 박자를 많이 벗어났는지 보여줍니다. 위의 기준값을 바꾸면 함께 바뀝니다.');
+    swap('segExtraText', '기준값을 벗어난 음');
+    swap('curveDesc', '기준값을 10ms에서 500ms까지 바꿔 가며, 눈금에서 기준값 이내로 친 소리의 비율이 어떻게 달라지는지 보여줍니다. 빨간 점선은 아무렇게나 쳐도 우연히 맞을 확률이라서, 파란 선이 이 선에 가까운 구간의 점수는 의미가 없습니다.');
+    swap('histDesc', 'BPM 모드에서 연습할 때마다 기록이 누적됩니다. 기록에는 소리의 시각과 BPM·눈금 위치가 함께 저장되어 있어서, 위의 기준값을 바꾸면 <b>모든 회차가 새 기준으로 다시 계산</b>됩니다.');
+    swap('thMissed', '전체 음');
+    swap('thExtra', '기준 밖');
+  }
+
+  function renderAllBpm(d) {
+    applyModeLayout(true, d);
+    const tol = tolMs / 1000;
+    const user = d.user_onsets || [];
+    const devs = bpmDevs(user, d.bpm, d.div, d.grid_phase);
+    const n = devs.length;
+    const periodSec = 60 / d.bpm / d.div;
+
+    // 기준값 이내로 친 소리(withinT)와 벗어난 소리(outT)로 나누고, 평균 거리와 흔들림(표준편차)을 구한다
+    const withinT = [], outT = [];
+    let sumAbs = 0, sum = 0;
+    devs.forEach(function (x, i) {
+      sumAbs += Math.abs(x); sum += x;
+      (Math.abs(x) <= tol ? withinT : outT).push(user[i]);
+    });
+    const acc = n > 0 ? withinT.length / n * 100 : 0;
+    const avgMs = n > 0 ? sumAbs / n * 1000 : 0;
+    const mean = n > 0 ? sum / n : 0;
+    const jitterMs = n > 0 ? Math.sqrt(devs.reduce(function (a, x) { return a + (x - mean) * (x - mean); }, 0) / n) * 1000 : 0;
+
+    $('accuracyBig').textContent = acc.toFixed(1) + '%';
+    $('avgErrorStat').textContent = avgMs.toFixed(1);
+    $('missedStat').textContent = n;
+    $('extraStat').textContent = outT.length;
+
+    const parts = [];
+    if (d.take_name) parts.push('연주 파일: ' + d.take_name);
+    parts.push('BPM ' + d.bpm + ' · ' + DIV_NAMES[d.div] + ' 눈금');
+    parts.push('기준 ' + tolMs + 'ms');
+    $('fileMeta').textContent = parts.join('  ·  ');
+
+    // 설정 요약: BPM 출처, 눈금 위치, 흔들림, 우연히 맞을 확률, 실제로 친 박자
+    const chance = bpmChance(tolMs, d.bpm, d.div);
+    const limitMs = periodSec * 1000 / 2;
+    let info = 'BPM ' + d.bpm + (d.bpm_source === 'auto' ? '(원곡에서 자동 측정)' : '(직접 입력)') + ' · 눈금 위치 ' + Math.round(d.grid_phase * 1000) + 'ms'
+      + (d.phase_mode === 'manual' ? '(직접 지정)' : '(자동 보정)') + ' · 박자 흔들림 ' + jitterMs.toFixed(1) + 'ms · 우연히 맞을 확률 ' + chance.toFixed(0) + '%';
+    let drift = null;
+    if (d.actual_bpm) {
+      drift = (d.actual_bpm / d.bpm - 1) * 100;
+      info += ' · 실제로 친 박자 약 ' + d.actual_bpm + ' BPM (설정 대비 ' + (drift >= 0 ? '+' : '') + drift.toFixed(1) + '%)';
+    }
+    $('bpmInfo').textContent = info;
+
+    // 점수를 그대로 믿기 어려운 경우의 안내
+    const notes = [];
+    if (d.bpm_hint) notes.push(d.bpm_hint);
+    if (tolMs >= limitMs) notes.push('기준값(' + tolMs + 'ms)이 눈금 간격의 절반(' + Math.round(limitMs) + 'ms) 이상이라, 아무렇게나 쳐도 거의 100%가 나옵니다. 점수가 의미 없으니 기준값을 낮추거나 눈금 단위를 줄이세요.');
+    if (n >= 6 && d.concentration < 0.5) notes.push('소리가 눈금에 잘 모이지 않습니다. (집중도 ' + d.concentration + ') 박자를 크게 놓쳤거나, BPM 또는 눈금 단위가 곡과 맞지 않을 수 있습니다.');
+    if (drift !== null && Math.abs(drift) >= 1) notes.push('설정한 BPM 과 실제로 친 박자가 1% 이상 다릅니다. BPM 입력이 정확한지(소수점까지) 확인해 보세요. BPM 이 조금만 틀려도 뒤로 갈수록 눈금이 어긋나 점수가 낮게 나옵니다.');
+    const notice = $('bpmNotice');
+    notice.textContent = notes.join('\n');
+    notice.style.display = notes.length ? 'block' : 'none';
+
+    // 파형 위에 눈금(점선)과 맞은 음(초록)·벗어난 음(빨강)을 표시. 눈금이 너무 많으면 박(한 박자) 눈금만, 그래도 많으면 생략
+    const gridAll = [];
+    for (let k = Math.ceil((0 - d.grid_phase) / periodSec); ; k++) {
+      const g = d.grid_phase + k * periodSec;
+      if (g > d.user_duration) break;
+      gridAll.push({ t: g, beat: ((k % d.div) + d.div) % d.div === 0 });
+    }
+    let grid = gridAll.length > 600 ? gridAll.filter(function (x) { return x.beat; }) : gridAll;
+    if (grid.length > 600) grid = [];
+    drawWave('userCanvas', d.user_waveform, d.user_duration, [
+      { times: withinT, color: '#2f9e5b' },
+      { times: outT, color: '#d64545' }
+    ], grid.map(function (x) { return x.t; }), d.user_duration);
+
+    drawDeviation('devCanvas', user, devs, tol, periodSec, d.user_duration);
+    drawSegmentSectionBpm(d, outT);
+    drawCurveSectionBpm(d, devs);
+    renderHistory(d);
+  }
+
+  // 각 소리가 눈금에서 벗어난 정도(ms)를 시간 순서로 찍은 그래프. 0선에 가까울수록 정확, 위 = 늦게, 아래 = 빨리
+  function drawDeviation(canvasId, times, devs, tolSec, periodSec, duration) {
+    const p = prepCanvas(canvasId, 230);
+    const ctx = p.ctx, w = p.w, h = p.h;
+    const padL = 50, padR = 14, padT = 14, padB = 30;
+    const plotW = w - padL - padR, plotH = h - padT - padB;
+    const yMax = periodSec * 1000 / 2;                         // 눈금에서 가장 멀 수 있는 거리 = 눈금 간격의 절반(ms)
+    const yOf = v => padT + plotH / 2 - (Math.max(-yMax, Math.min(yMax, v)) / yMax) * (plotH / 2);
+    const xOf = t => padL + (duration > 0 ? t / duration : 0) * plotW;
+    ctx.font = '11px "Malgun Gothic", Arial, sans-serif';
+
+    // 기준값 이내 범위를 연한 초록 띠로 표시
+    const band = Math.min(yMax, tolSec * 1000);
+    ctx.fillStyle = 'rgba(47,158,91,0.13)';
+    ctx.fillRect(padL, yOf(band), plotW, yOf(-band) - yOf(band));
+
+    // 가로 눈금선(+최대, +절반, 0, -절반, -최대)과 왼쪽 숫자
+    [-yMax, -yMax / 2, 0, yMax / 2, yMax].forEach(function (v) {
+      ctx.strokeStyle = v === 0 ? '#9aa6b8' : '#e3e8ef';
+      ctx.lineWidth = v === 0 ? 1.5 : 1;
+      ctx.beginPath(); ctx.moveTo(padL, yOf(v)); ctx.lineTo(w - padR, yOf(v)); ctx.stroke();
+      ctx.fillStyle = '#888'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText((v > 0 ? '+' : '') + Math.round(v) + 'ms', padL - 6, yOf(v));
+    });
+    ctx.fillStyle = '#9aa6b8'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('늦게 ↑', padL + 6, padT + 3);
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('빨리 ↓', padL + 6, padT + plotH - 3);
+
+    // 아래쪽 시간 눈금 (5개 정도)
+    ctx.fillStyle = '#555'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const clock = duration >= 60;
+    for (let i = 0; i <= 4; i++) { const t = duration * i / 4; ctx.fillText(fmtT(t, clock) + (clock ? '' : '초'), xOf(t), padT + plotH + 8); }
+
+    // 소리 하나하나를 점으로: 기준값 이내 = 초록, 벗어남 = 빨강. 마우스를 올리면 상세가 말풍선으로 뜬다
+    const bars = [];
+    times.forEach(function (t, i) {
+      const ok = Math.abs(devs[i]) <= tolSec;
+      const x = xOf(t), y = yOf(devs[i] * 1000);
+      ctx.fillStyle = ok ? '#2f9e5b' : '#d64545';
+      ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fill();
+      bars.push({
+        x0: x - 6, x1: x + 6,
+        text: fmtT(t, clock) + (clock ? '' : '초') + '\n눈금보다 ' + Math.abs(devs[i] * 1000).toFixed(0) + 'ms ' + (devs[i] > 0 ? '늦게' : '빨리') + ' 침\n' + (ok ? '기준 안' : '기준 밖')
+      });
+    });
+    bindTip(p.c, bars);
+  }
+
+  // 시간대별 분포(BPM 모드): 구간마다 기준값을 벗어난 소리의 개수
+  function drawSegmentSectionBpm(d, outT) {
+    const segLen = d.segment_seconds || 2;
+    const segs = computeSegments(d.user_onsets, [], outT, d.user_duration, segLen);
+    const clock = d.user_duration >= 60;
+    const items = segs.map(function (sg) {
+      return { label: segLabel(sg, clock), missed: 0, extra: sg.extra,
+               tip: segRangeText(sg, clock) + '\n친 음 ' + sg.total + '개\n기준 밖 ' + sg.extra };
+    });
+    drawStackedBars('segCanvas', items, { height: 210, minMax: 2 });
+
+    const totalErr = segs.reduce(function (a, sg) { return a + sg.extra; }, 0);
+    const maxErr = Math.max.apply(null, segs.map(function (sg) { return sg.extra; }));
+    if (totalErr === 0) {
+      $('segSummary').textContent = '모든 구간에서 기준값 안으로 쳤습니다. (기준 ' + tolMs + 'ms)';
+    } else {
+      const worst = segs.filter(function (sg) { return sg.extra === maxErr; });
+      const shown = worst.slice(0, 3).map(function (sg) { return segRangeText(sg, clock); }).join(', ');
+      $('segSummary').textContent = '가장 많이 벗어난 구간: ' + shown + (worst.length > 3 ? ' 외 ' + (worst.length - 3) + '곳' : '')
+        + ' (구간당 ' + maxErr + '개) · 전체 ' + segs.length + '개 구간 중 벗어난 소리가 있는 구간 ' + segs.filter(function (sg) { return sg.extra > 0; }).length + '개 (기준 ' + tolMs + 'ms)';
+    }
+  }
+
+  // 기준값별 정확도 곡선(BPM 모드): 파란 선 = 이번 연주, 빨간 점선 = 아무렇게나 쳐도 우연히 맞을 확률(기준선)
+  function drawCurveSectionBpm(d, devs) {
+    const periodMs = 60 / d.bpm / d.div * 1000;
+    const absd = devs.map(Math.abs);
+    const n = absd.length;
+    const curve = CURVE_MS.map(function (ms) { return n > 0 ? absd.filter(function (x) { return x <= ms / 1000; }).length / n * 100 : 0; });
+    const base = CURVE_MS.map(function (ms) { return Math.min(100, 2 * ms / periodMs * 100); });
+
+    // 한도 = 눈금 간격의 절반. 이보다 큰 기준값은 우연히 맞는 비율이 100%라서 의미가 없으므로, 후보값도 한도 안에서만 찾는다
+    const limit = Math.max(CURVE_MS[0], Math.min(500, Math.floor(periodMs / 2)));
+    const capIdx = Math.max(0, Math.min(CURVE_MS.length - 1, Math.floor((limit - CURVE_MS[0]) / 5)));
+    const maxAcc = curve[capIdx];
+    const candidate = firstReach(curve.slice(0, capIdx + 1), maxAcc * 0.95);
+    const cur80 = firstReach(curve.slice(0, capIdx + 1), 80), cur90 = firstReach(curve.slice(0, capIdx + 1), 90);
+    const reach = function (v) { return v === null ? limit + 'ms 한도 안에서는 도달하지 못함' : v + 'ms'; };
+    $('curveSummary').textContent = '이번 연주: 정확도 80%에 도달하는 기준값 ' + reach(cur80) + ', 90%는 ' + reach(cur90)
+      + ' · 눈금 간격의 절반(한도 ' + limit + 'ms)에서의 정확도 ' + curve[capIdx].toFixed(1) + '%';
+
+    const btn = $('applyCandidate'), note = $('curveNote');
+    if (candidate !== null && maxAcc > 0) {
+      btn.style.display = 'inline-block';
+      btn.textContent = '후보값 ' + candidate + 'ms 적용';
+      btn.onclick = function () { setTolerance(candidate, 'btn'); };
+      note.textContent = '후보값 = 정확도가 한도(' + limit + 'ms)에서의 최대치(' + maxAcc.toFixed(1) + '%)의 95%에 처음 도달하는 기준값입니다. '
+        + '한도는 눈금 간격(' + Math.round(periodMs) + 'ms)의 절반이고, 이보다 크면 아무렇게나 쳐도 점수가 높게 나옵니다.';
+    } else {
+      btn.style.display = 'none';
+      note.textContent = '정확도가 0%에 가까워서 후보값을 정할 수 없습니다. BPM 이나 눈금 단위가 곡과 맞는지 확인해 보세요.';
+    }
+    drawCurve('curveCanvas', { curve: curve, avg: null, base: base });
+  }
+
+  // ------------------------------------------------------------
+  // 반복 연습 기록 (결과 추이) — 현재 기준값으로 모든 회차를 다시 채점
+  // ------------------------------------------------------------
+
+  // 기록 한 건(원본 onset 포함)을 주어진 기준(초)으로 다시 채점한다.
+  function evaluateEntry(h, tolSec) {
+    const r = compareOnsets(h.original_onsets, h.user_onsets, tolSec);
+    const n = h.original_onsets.length;
+    return {
+      acc: n > 0 ? r.matches.length / n * 100 : 0,
+      avg: r.matches.length > 0 ? r.matches.reduce((s, m) => s + m.error, 0) / r.matches.length * 1000 : 0,
+      missed: r.missed.length,
+      extra: r.extra.length,
+      segs: computeSegments(h.original_onsets, r.missed, r.extra, h.original_duration, h.segment_seconds)
+    };
+  }
+
+  function renderHistory(data) {
+    // 다시 계산할 수 없는 기록(원본 onset 이 없는 아주 오래된 형식)은 제외. 곡 모드와 BPM 모드의 기록은 섞지 않는다
+    const bpmMode = isBpm(data);
+    const hist = (data.history || []).filter(h => bpmMode
+      ? (h.mode === 'bpm' && Array.isArray(h.user_onsets) && Number.isFinite(h.bpm) && Number.isFinite(h.grid_phase))
+      : (h.mode !== 'bpm' && Array.isArray(h.original_onsets) && Array.isArray(h.user_onsets)));
+    const section = $('historySection');
+    if (!hist.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+
+    const ev = hist.map(h => bpmMode ? evaluateEntryBpm(h, tolMs / 1000) : evaluateEntry(h, tolMs / 1000));   // 모든 회차를 현재 기준으로 재계산
+    const songTotal = data.history_song_total || hist.length;
+    const firstNo = Math.max(1, songTotal - hist.length + 1);          // 표시된 첫 기록의 회차 번호
+
+    const first = ev[0].acc, last = ev[ev.length - 1].acc;
+    if (hist.length === 1) {
+      $('trendSummary').textContent = '연습 기록 ' + songTotal + '회 — 현재 기준 ' + tolMs + 'ms에서 ' + last.toFixed(1) + '%';
+    } else {
+      const diff = last - first, sign = diff > 0 ? '+' : '';
+      $('trendSummary').textContent = '현재 기준 ' + tolMs + 'ms · 최근 ' + hist.length + '회: ' + first.toFixed(1) + '% → ' + last.toFixed(1) + '% (' + sign + diff.toFixed(1) + '%p)';
+    }
+    $('histMeta').textContent = (bpmMode ? 'BPM 모드의 연습은 모두 ' : '이 곡의 연습은 모두 ') + songTotal.toLocaleString() + '회이고, 화면에는 최근 ' + hist.length + '회를 표시합니다.'
+      + (data.history_total ? ' 기록 파일(practice_history.json)에는 전체 ' + data.history_total.toLocaleString() + '건이 누적 저장되어 있습니다.' : '');
+
+    drawTrend('trendCanvas', hist, ev, firstNo);
+    renderFrequent(data, hist, ev);
+
+    const body = $('historyBody');
+    body.innerHTML = '';
+    for (let k = hist.length - 1; k >= 0; k--) {
+      const h = hist[k], e = ev[k];
+      const tr = document.createElement('tr');
+      if (k === hist.length - 1) tr.className = 'latest';
+      const cells = [(firstNo + k).toLocaleString() + '회', h.timestamp, h.take + (bpmMode ? ' (BPM ' + h.bpm + ' · ' + DIV_NAMES[h.div] + ')' : ''), e.acc.toFixed(1) + '%', e.avg.toFixed(1) + 'ms', bpmMode ? e.total : e.missed, e.extra, h.tolerance_ms + 'ms'];
+      cells.forEach(function (v, ci) {
+        const td = document.createElement('td');
+        td.textContent = v;                               // textContent: 파일 이름에 특수문자가 있어도 안전
+        if (ci === 7 && h.tolerance_ms !== tolMs) td.className = 'old-tol';
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    }
+  }
+
+  // 회차별 정확도 꺾은선 그래프 (현재 기준으로 재계산된 값)
+  function drawTrend(canvasId, hist, ev, firstNo) {
+    const p = prepCanvas(canvasId, 210);
+    const ctx = p.ctx, w = p.w, h = p.h;
+    const padL = 40, padR = 16, padT = 20, padB = 32;
+    const plotW = w - padL - padR, plotH = h - padT - padB;
+    const n = hist.length;
+
+    ctx.font = '11px "Malgun Gothic", Arial, sans-serif';
+    ctx.lineWidth = 1;
+    [0, 25, 50, 75, 100].forEach(function (v) {
+      const y = padT + plotH - (v / 100) * plotH;
+      ctx.strokeStyle = '#e3e8ef';
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+      ctx.fillStyle = '#888'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(v + '%', padL - 6, y);
+    });
+
+    const inner = 14;
+    const xOf = i => n === 1 ? padL + plotW / 2 : padL + inner + (plotW - inner * 2) * (i / (n - 1));
+    const yOf = v => padT + plotH - (Math.max(0, Math.min(100, v)) / 100) * plotH;
+
+    ctx.strokeStyle = '#2f5da8'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ev.forEach(function (e, i) { if (i === 0) ctx.moveTo(xOf(i), yOf(e.acc)); else ctx.lineTo(xOf(i), yOf(e.acc)); });
+    ctx.stroke();
+
+    const labelStep = Math.max(1, Math.ceil(n / Math.max(1, Math.floor(plotW / 52))));
+    const bars = [];
+    ev.forEach(function (e, i) {
+      const x = xOf(i), y = yOf(e.acc), isLast = i === n - 1;
+      ctx.fillStyle = isLast ? '#2f5da8' : '#8fa3c2';
+      ctx.beginPath(); ctx.arc(x, y, isLast ? 6 : 4, 0, Math.PI * 2); ctx.fill();
+      if (n <= 12 || isLast) {
+        ctx.fillStyle = '#2b2b2b'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.fillText(e.acc.toFixed(1) + '%', x, y - 9);
+      }
+      // 라벨은 labelStep 간격으로 표시하되, 마지막 라벨과 너무 가까운 것은 겹치지 않도록 건너뜀
+      if (isLast || (i % labelStep === 0 && (n - 1 - i) >= labelStep)) {
+        ctx.fillStyle = '#555'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.fillText((firstNo + i).toLocaleString() + '회', x, padT + plotH + 8);
+      }
+      const slot = n === 1 ? plotW : (plotW - inner * 2) / (n - 1);
+      const hh = hist[i];
+      bars.push({
+        x0: x - slot / 2, x1: x + slot / 2,
+        text: (firstNo + i).toLocaleString() + '회차 · ' + hh.timestamp + '\n' + hh.take
+          + '\n현재 기준 ' + tolMs + 'ms: ' + e.acc.toFixed(1) + '% · 평균 오차 ' + e.avg.toFixed(1) + 'ms\n' + (hh.mode === 'bpm' ? '기준 밖 ' + e.extra + ' / 전체 ' + e.total : '놓침 ' + e.missed + ' · 엉뚱 ' + e.extra)
+          + '\n(기록 당시 ' + hh.tolerance_ms + 'ms: ' + hh.accuracy.toFixed(1) + '%)'
+      });
+    });
+    bindTip(p.c, bars);
+  }
+
+  // 자주 틀리는 구간: 표시된 회차들의 구간별 오류를 평균 낸 막대그래프 (현재 기준으로 재계산)
+  function renderFrequent(data, hist, ev) {
+    const segLen = data.segment_seconds || 2;
+    const n = segmentCount(durationOf(data), segLen);
+    // 구간 설정이 같은 기록만 사용 (곡이나 구간 길이가 다르면 비교할 수 없으므로)
+    const usable = ev.filter((e, i) => hist[i].segment_seconds === segLen && e.segs.length === n);
+
+    const canvas = $('freqCanvas'), summary = $('freqSummary'), note = $('freqNote');
+    if (usable.length < 2) {
+      canvas.style.display = 'none'; summary.style.display = 'none'; note.style.display = 'block';
+      return;
+    }
+    note.style.display = 'none'; canvas.style.display = 'block'; summary.style.display = 'block';
+
+    const clock = durationOf(data) >= 60;
+    const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const items = [];
+    for (let i = 0; i < n; i++) {
+      const s = { start: i * segLen, end: Math.min((i + 1) * segLen, durationOf(data)) };
+      const m = avg(usable.map(e => e.segs[i].missed));
+      const x = avg(usable.map(e => e.segs[i].extra));
+      items.push({
+        label: segLabel(s, clock), missed: m, extra: x, range: segRangeText(s, clock),
+        tip: segRangeText(s, clock) + '\n평균 놓침 ' + m.toFixed(1) + ' · 평균 엉뚱 ' + x.toFixed(1) + '\n(' + usable.length + '회 연습 기준, ' + tolMs + 'ms)'
+      });
+    }
+    drawStackedBars('freqCanvas', items, { height: 210, minMax: 1 });
+
+    const maxAvg = Math.max.apply(null, items.map(it => it.missed + it.extra));
+    if (maxAvg === 0) {
+      summary.textContent = '모든 구간에서 오류가 거의 없습니다. (' + usable.length + '회 연습 기준, ' + tolMs + 'ms)';
+    } else {
+      const worst = items.filter(it => Math.abs(it.missed + it.extra - maxAvg) < 1e-9).slice(0, 3).map(it => it.range).join(', ');
+      summary.textContent = '가장 자주 틀리는 구간: ' + worst + ' (평균 오류 ' + maxAvg.toFixed(1) + '개 · ' + usable.length + '회 연습 기준, ' + tolMs + 'ms)';
+    }
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TempoTrace 녹음</title>
+<style>
+  :root { --blue: #2f5da8; --line: #d3d9e2; --soft: #f4f7fb; --text: #1c1c1c; --sub: #555; --bad: #c0392b; --ok: #1e8449; }
+  * { box-sizing: border-box; word-break: keep-all; overflow-wrap: break-word; }
+  body { margin: 0; padding: 40px 16px; background: #eef1f5; color: var(--text); font-family: '맑은 고딕', 'Malgun Gothic', Arial, sans-serif; line-height: 1.6; }
+  .wrap { max-width: 960px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 32px 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  h1 { font-size: 24px; margin: 0 0 6px; color: var(--text); }
+  p.lead { margin: 0 0 20px; color: var(--sub); font-size: 15px; }
+  .card { border-radius: 8px; padding: 18px 20px; margin-bottom: 16px; background: var(--soft); }
+  .card h2 { font-size: 16px; margin: 0 0 12px; color: var(--blue); }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  label { font-size: 14px; color: var(--sub); }
+  input[type=number], select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: #fff; }
+  input[type=number] { width: 96px; font-size: 22px; font-weight: bold; color: var(--blue); text-align: center; }
+  button { font: inherit; padding: 8px 16px; border-radius: 6px; border: 1px solid var(--blue); background: #fff; color: var(--blue); cursor: pointer; }
+  button:hover:not(:disabled) { background: var(--soft); }
+  button.primary { background: var(--blue); color: #fff; }
+  button.primary:hover:not(:disabled) { background: #264d8d; }
+  button.stop { background: var(--bad); border-color: var(--bad); color: #fff; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .beats { display: flex; gap: 10px; margin-top: 14px; }
+  .beat { width: 28px; height: 28px; border-radius: 50%; background: var(--soft); border: 1px solid var(--line); }
+  .beat.on { background: var(--blue); border-color: var(--blue); }
+  .beat.accent.on { background: #e08a1e; border-color: #e08a1e; }
+  .meter { height: 10px; background: var(--soft); border: 1px solid var(--line); border-radius: 5px; overflow: hidden; margin-top: 12px; }
+  .meter > div { height: 100%; width: 0; background: var(--blue); transition: width .06s; }
+  .status { font-size: 15px; min-height: 24px; margin-top: 12px; }
+  .status.err { color: var(--bad); }
+  .note { font-size: 13px; color: var(--sub); margin-top: 8px; }
+  .result { display: none; border-left: 4px solid var(--blue); background: var(--soft); padding: 14px 16px; margin-top: 14px; border-radius: 0 6px 6px 0; }
+  .result .num { font-size: 32px; font-weight: bold; color: var(--blue); }
+  .result a, .result button { margin-top: 6px; }
+  .tip { background: #fff8e8; border: 1px solid #f0d9a0; border-radius: 6px; padding: 10px 14px; font-size: 14px; }
+.tt-nav{display:flex;gap:8px;flex-wrap:wrap;max-width:960px;margin:0 auto 14px}.tt-nav[hidden]{display:none}
+.tt-nav a{padding:6px 14px;border:1px solid #2f5da8;border-radius:16px;color:#2f5da8;text-decoration:none;font-size:14px;background:#fff}
+.tt-nav a.on{background:#2f5da8;color:#fff}
+  @media (max-width: 640px) { body { padding: 10px; } .wrap { padding: 18px 14px; } h1 { font-size: 20px; } }
+</style>
+</head>
+<body>
+<nav class="tt-nav" id="ttNav" hidden><a href="/record" data-p="/record">녹음</a><a href="/" data-p="/">결과 리포트</a><a href="/review" data-p="/review">기준값 검토</a></nav>
+<script>/* 내 컴퓨터의 서버(127.0.0.1)에서 열었을 때만 메뉴를 보여준다. 파일로 열거나 웹에 올렸을 때는 링크가 안 맞으므로 숨긴다 */
+(function(){var h=location.hostname;if(!/^https?:$/.test(location.protocol)||(h!=='127.0.0.1'&&h!=='localhost'))return;
+var n=document.getElementById('ttNav');n.hidden=false;var p=location.pathname.replace(/\/index\.html$/,'/').replace(/\.html$/,'');
+if(p==='/accuracy_report')p='/';[].forEach.call(n.querySelectorAll('a'),function(a){if(a.getAttribute('data-p')===p)a.className='on';});})();</script>
+<div class="wrap">
+  <h1>TempoTrace 녹음</h1>
+  <p class="lead">BPM을 정하고, 메트로놈을 들으면서 연주를 녹음하면 박자 눈금과 얼마나 맞았는지 바로 분석합니다.</p>
+
+  <div class="tip">이어폰이나 헤드폰을 끼고 사용하세요. 스피커로 나온 메트로놈 소리가 마이크에 들어가면 연주가 아닌 클릭 소리까지 분석되어 점수가 틀어집니다.</div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>1. 템포 정하기</h2>
+    <div class="row">
+      <label>BPM <input type="number" id="bpm" min="30" max="300" step="1" value="100"></label>
+      <button id="tap">탭 템포 (박자에 맞춰 눌러보기)</button>
+      <label>눈금 단위
+        <select id="div">
+          <option value="1">4분음표</option>
+          <option value="2">8분음표</option>
+          <option value="4">16분음표</option>
+        </select>
+      </label>
+    </div>
+    <div class="note" id="tapNote">탭 템포: 원하는 속도로 4번 이상 눌러 주세요. 마지막 몇 번의 간격으로 BPM을 계산합니다.</div>
+    <div class="beats" id="beats"><div class="beat accent"></div><div class="beat"></div><div class="beat"></div><div class="beat"></div></div>
+    <div class="row" style="margin-top:12px">
+      <button id="preview">메트로놈 미리 듣기</button>
+      <label><input type="checkbox" id="clickDuring" checked> 녹음 중에도 메트로놈 켜기</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. 녹음하기</h2>
+    <div class="row">
+      <label>녹음 길이
+        <select id="dur">
+          <option value="15">15초</option>
+          <option value="30" selected>30초</option>
+          <option value="60">60초</option>
+          <option value="0">직접 멈출 때까지</option>
+        </select>
+      </label>
+      <button class="primary" id="rec">● 녹음 시작 (4박 카운트 후)</button>
+      <button class="stop" id="stop" disabled>■ 정지</button>
+    </div>
+    <div class="meter"><div id="level"></div></div>
+    <div class="status" id="status">마이크 사용을 허용하면 녹음할 수 있습니다.</div>
+    <div class="result" id="result"></div>
+  </div>
+
+  <p class="note">연습 기록과 결과 화면은 내 컴퓨터의 TempoTrace 프로그램(<code>python accuracy_test.py --record</code>)으로 열었을 때 저장됩니다.
+    웹에 올라간 데모에서는 녹음한 wav 파일을 내려받아 프로그램으로 분석할 수 있습니다.</p>
+</div>
+
+<script>
+// ---------------------------------------------------------------
+// TempoTrace 녹음 페이지
+//  - 메트로놈: Web Audio 의 시계(currentTime)에 미리 예약해서 박자가 흔들리지 않게 한다
+//  - 녹음: 마이크 소리를 AudioWorklet 으로 받아 16bit wav 로 직접 만든다 (ffmpeg 변환이 필요 없다)
+//  - 분석: 내 컴퓨터의 TempoTrace 서버(127.0.0.1)가 켜져 있으면 바로 업로드해서 분석하고, 아니면 wav 를 내려받게 한다
+// ---------------------------------------------------------------
+const $ = id => document.getElementById(id);
+const BPM_MIN = 30, BPM_MAX = 300;
+const COUNT_IN = 4;                                   // 녹음 전에 들려주는 박 수
+
+// 내 컴퓨터의 서버에서 열었는지 (127.0.0.1 / localhost 에서 http 로 열린 경우에만 업로드 가능)
+const LOCAL_SERVER = location.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(location.hostname);
+
+let ctx = null;                                       // AudioContext (사용자가 버튼을 눌렀을 때 만든다)
+let micStream = null, micNode = null, worklet = null;
+let chunks = [], capturing = false, recStartPerf = 0;
+let timerId = null, nextBeatTime = 0, beatIndex = 0, metroOn = false, beatLog = [];
+let autoStopId = null, recording = false;
+
+// ----- 주소의 ?bpm=100&div=2 로 칸 미리 채우기 (python --record --bpm=100 --div=2 가 열어주는 주소) -----
+(function prefill() {
+  const q = new URLSearchParams(location.search);
+  const b = parseFloat(q.get('bpm')), d = q.get('div');
+  if (b >= BPM_MIN && b <= BPM_MAX) $('bpm').value = b;
+  if (['1', '2', '4'].includes(d)) $('div').value = d;
+})();
+
+function getBpm() {
+  const v = parseFloat($('bpm').value);
+  return (v >= BPM_MIN && v <= BPM_MAX) ? v : null;
+}
+function setStatus(text, isErr) { $('status').textContent = text; $('status').className = 'status' + (isErr ? ' err' : ''); }
+
+// ----- 탭 템포: 눌린 시각의 간격으로 BPM 계산 (2초 넘게 쉬면 처음부터 다시) -----
+let taps = [];
+$('tap').addEventListener('click', () => {
+  const now = performance.now();
+  if (taps.length && now - taps[taps.length - 1] > 2000) taps = [];
+  taps.push(now);
+  taps = taps.slice(-8);                              // 최근 8번만 사용
+  if (taps.length >= 4) {
+    const gaps = [];
+    for (let i = 1; i < taps.length; i++) gaps.push(taps[i] - taps[i - 1]);
+    gaps.sort((a, b) => a - b);
+    const mid = gaps[Math.floor(gaps.length / 2)];    // 중앙값: 한 번 삐끗한 탭에 덜 흔들린다
+    const bpm = Math.round(60000 / mid);
+    if (bpm >= BPM_MIN && bpm <= BPM_MAX) { $('bpm').value = bpm; $('tapNote').textContent = `탭 템포 결과: ${bpm} BPM (${taps.length}번 누름)`; }
+    else $('tapNote').textContent = `측정값이 범위(${BPM_MIN}~${BPM_MAX})를 벗어났습니다. 다시 눌러 보세요.`;
+  } else {
+    $('tapNote').textContent = `${taps.length}번 눌렀습니다. 4번 이상 눌러 주세요.`;
+  }
+});
+
+// ----- 메트로놈 -----
+function click(time, accent) {
+  const osc = ctx.createOscillator(), gain = ctx.createGain();
+  osc.frequency.value = accent ? 1500 : 1000;
+  gain.gain.setValueAtTime(0.0001, time);
+  gain.gain.exponentialRampToValueAtTime(0.5, time + 0.002);
+  gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(time); osc.stop(time + 0.06);
+}
+function flashBeat(i, when) {
+  const delay = Math.max(0, (when - ctx.currentTime) * 1000);
+  setTimeout(() => {
+    document.querySelectorAll('.beat').forEach((el, k) => el.classList.toggle('on', k === i % 4));
+  }, delay);
+}
+// 25ms 마다 깨어나서 앞으로 0.15초 안에 올 박을 미리 예약한다 (setInterval 이 조금 늦어도 소리는 정확한 시각에 난다)
+function startMetronome(audible, onBeat) {
+  const period = 60 / getBpm();
+  nextBeatTime = ctx.currentTime + 0.1;
+  beatIndex = 0; metroOn = true;
+  timerId = setInterval(() => {
+    while (nextBeatTime < ctx.currentTime + 0.15) {
+      if (audible()) click(nextBeatTime, beatIndex % 4 === 0);
+      flashBeat(beatIndex, nextBeatTime);
+      if (onBeat) onBeat(beatIndex, nextBeatTime);
+      nextBeatTime += period; beatIndex++;
+    }
+  }, 25);
+}
+function stopMetronome() {
+  metroOn = false; clearInterval(timerId); timerId = null;
+  document.querySelectorAll('.beat').forEach(el => el.classList.remove('on'));
+}
+
+async function ensureAudio() {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === 'suspended') await ctx.resume();
+}
+
+let previewing = false;
+$('preview').addEventListener('click', async () => {
+  if (recording) return;
+  if (!getBpm()) { setStatus(`BPM 은 ${BPM_MIN}~${BPM_MAX} 사이로 입력하세요.`, true); return; }
+  await ensureAudio();
+  if (previewing) { previewing = false; stopMetronome(); $('preview').textContent = '메트로놈 미리 듣기'; return; }
+  previewing = true; $('preview').textContent = '미리 듣기 멈추기';
+  startMetronome(() => true);
+});
+
+// ----- 마이크 + 녹음 장치 -----
+const WORKLET_CODE = `
+class Grab extends AudioWorkletProcessor {
+  process(inputs) { const ch = inputs[0][0]; if (ch) this.port.postMessage(ch.slice(0)); return true; }
+}
+registerProcessor('grab', Grab);`;
+
+async function openMic() {
+  if (micStream) return;
+  // 소리를 '다듬는' 기능을 모두 꺼야 연주의 시작 시점이 그대로 녹음된다
+  micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  micNode = ctx.createMediaStreamSource(micStream);
+  const onChunk = data => {
+    let peak = 0; for (let i = 0; i < data.length; i++) { const a = Math.abs(data[i]); if (a > peak) peak = a; }
+    $('level').style.width = Math.min(100, peak * 140) + '%';
+    if (capturing) chunks.push(data);
+  };
+  try {
+    const url = URL.createObjectURL(new Blob([WORKLET_CODE], { type: 'application/javascript' }));
+    await ctx.audioWorklet.addModule(url);
+    worklet = new AudioWorkletNode(ctx, 'grab');
+    worklet.port.onmessage = e => onChunk(e.data);
+    micNode.connect(worklet);                         // 출력(스피커)에는 연결하지 않는다: 마이크 소리가 되울리지 않게
+  } catch (e) {                                       // 오래된 브라우저: 예전 방식으로 대신 받기
+    const sp = ctx.createScriptProcessor(2048, 1, 1);
+    sp.onaudioprocess = ev => onChunk(new Float32Array(ev.inputBuffer.getChannelData(0)));
+    micNode.connect(sp); sp.connect(ctx.destination); worklet = sp;
+  }
+}
+
+// ----- wav 만들기 (16bit 모노 PCM) -----
+function encodeWav(chunkList, sampleRate) {
+  let n = 0; chunkList.forEach(c => n += c.length);
+  const buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  w(36, 'data'); v.setUint32(40, n * 2, true);
+  let o = 44;
+  for (const c of chunkList) for (let i = 0; i < c.length; i++) {
+    const s = Math.max(-1, Math.min(1, c[i]));
+    v.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true); o += 2;
+  }
+  return new Blob([buf], { type: 'audio/wav' });
+}
+
+// ----- 녹음 시작 / 정지 -----
+$('rec').addEventListener('click', async () => {
+  if (recording) return;
+  const bpm = getBpm();
+  if (!bpm) { setStatus(`BPM 은 ${BPM_MIN}~${BPM_MAX} 사이로 입력하세요.`, true); return; }
+  $('result').style.display = 'none';
+  try {
+    await ensureAudio();
+    if (previewing) { previewing = false; stopMetronome(); $('preview').textContent = '메트로놈 미리 듣기'; }
+    await openMic();
+  } catch (e) {
+    setStatus('마이크를 사용할 수 없습니다. 브라우저의 마이크 허용 설정을 확인하세요. (' + (e.name || e) + ')', true);
+    return;
+  }
+  recording = true; chunks = []; capturing = false;
+  $('rec').disabled = true; $('stop').disabled = false; $('bpm').disabled = true;
+  setStatus(`카운트 중... (${COUNT_IN}박 뒤에 녹음이 시작됩니다)`);
+  const dur = parseInt($('dur').value, 10);
+  startMetronome(() => beatIndex < COUNT_IN || $('clickDuring').checked, (i, when) => {
+    if (i === COUNT_IN) {                             // 카운트가 끝나는 박에 맞춰 녹음을 시작한다
+      setTimeout(() => {
+        if (!recording) return;
+        capturing = true; recStartPerf = performance.now();
+        setStatus('● 녹음 중... 연주하세요.');
+        if (dur > 0) autoStopId = setTimeout(stopRecording, dur * 1000);
+      }, Math.max(0, (when - ctx.currentTime) * 1000));
+    }
+  });
+});
+$('stop').addEventListener('click', stopRecording);
+
+async function stopRecording() {
+  if (!recording) return;
+  recording = false; capturing = false;
+  clearTimeout(autoStopId); stopMetronome();
+  $('stop').disabled = true; $('rec').disabled = false; $('bpm').disabled = false;
+  $('level').style.width = '0';
+  const total = chunks.reduce((s, c) => s + c.length, 0);
+  if (total < ctx.sampleRate * 2) { setStatus('녹음이 너무 짧습니다. 최소 2초 이상 녹음하세요.', true); return; }
+  const wav = encodeWav(chunks, ctx.sampleRate);
+  const secs = (total / ctx.sampleRate).toFixed(1);
+  showDownload(wav, secs);
+  if (!LOCAL_SERVER) { setStatus(`녹음 완료 (${secs}초). 이 페이지는 분석 서버와 연결되어 있지 않아 파일로 저장할 수 있습니다.`); return; }
+  setStatus(`녹음 완료 (${secs}초). 분석하는 중...`);
+  try {
+    const bpm = getBpm(), div = $('div').value;
+    const r = await fetch(`/api/record?bpm=${bpm}&div=${div}`, { method: 'POST', headers: { 'Content-Type': 'audio/wav' }, body: wav });
+    const j = await r.json();
+    if (!r.ok) { setStatus(j.error || '분석에 실패했습니다.', true); return; }
+    setStatus('분석이 끝났습니다.');
+    showResult(j);
+  } catch (e) {
+    setStatus('서버에 연결하지 못했습니다. 프로그램(--record)이 켜져 있는지 확인하세요.', true);
+  }
+}
+
+let lastWavUrl = null;
+function showDownload(blob, secs) {
+  if (lastWavUrl) URL.revokeObjectURL(lastWavUrl);
+  lastWavUrl = URL.createObjectURL(blob);
+  const box = $('result');
+  box.style.display = 'block';
+  box.innerHTML = `<div>녹음 ${secs}초 · BPM ${getBpm()}</div><a id="dl" href="${lastWavUrl}" download="tempotrace_take.wav"><button>wav 파일 내려받기</button></a>`;
+}
+function showResult(j) {
+  const box = $('result');
+  box.innerHTML = `<div class="num">${j.accuracy}%</div>
+    <div>눈금에 맞은 비율 (소리 ${j.sounds}개 · 기준값 ${j.tolerance_ms}ms)</div>
+    <a href="/" target="_blank"><button class="primary">결과 리포트 보기</button></a>
+    <a href="/review" target="_blank"><button>기준값 검토 보기</button></a>
+    <a href="${lastWavUrl}" download="${j.file}"><button>wav 내려받기</button></a>`;
+}
+</script>
+</body>
+</html>
